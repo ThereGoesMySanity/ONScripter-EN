@@ -45,14 +45,14 @@ static const char* messages[][8] = {
       "`Quit?",
       "Yes",
       "No" },
-    { "%s%s@%sŒ%s“ú%s%s•ª",
-      "%s%s@||||||||||||",
-      "%s%s‚ÉƒZ[ƒu‚µ‚Ü‚·B‚æ‚ë‚µ‚¢‚Å‚·‚©H",
-      "%s%s‚ğƒ[ƒh‚µ‚Ü‚·B‚æ‚ë‚µ‚¢‚Å‚·‚©H",
-      "ƒŠƒZƒbƒg‚µ‚Ü‚·B‚æ‚ë‚µ‚¢‚Å‚·‚©H",
-      "I—¹‚µ‚Ü‚·B‚æ‚ë‚µ‚¢‚Å‚·‚©H",
-      "‚Í‚¢",
-      "‚¢‚¢‚¦" }
+    { "%s%sï¿½@%sï¿½ï¿½%sï¿½ï¿½%sï¿½ï¿½%sï¿½ï¿½",
+      "%s%sï¿½@ï¿½|ï¿½|ï¿½|ï¿½|ï¿½|ï¿½|ï¿½|ï¿½|ï¿½|ï¿½|ï¿½|ï¿½|",
+      "%s%sï¿½ÉƒZï¿½[ï¿½uï¿½ï¿½ï¿½Ü‚ï¿½ï¿½Bï¿½ï¿½ë‚µï¿½ï¿½ï¿½Å‚ï¿½ï¿½ï¿½ï¿½H",
+      "%s%sï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½hï¿½ï¿½ï¿½Ü‚ï¿½ï¿½Bï¿½ï¿½ë‚µï¿½ï¿½ï¿½Å‚ï¿½ï¿½ï¿½ï¿½H",
+      "ï¿½ï¿½ï¿½Zï¿½bï¿½gï¿½ï¿½ï¿½Ü‚ï¿½ï¿½Bï¿½ï¿½ë‚µï¿½ï¿½ï¿½Å‚ï¿½ï¿½ï¿½ï¿½H",
+      "ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½Bï¿½ï¿½ë‚µï¿½ï¿½ï¿½Å‚ï¿½ï¿½ï¿½ï¿½H",
+      "ï¿½Í‚ï¿½",
+      "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½" }
 };
 
 const char* ONScripterLabel::getMessageString( MessageId which )
@@ -114,7 +114,9 @@ void ONScripterLabel::leaveSystemCall( bool restore_flag )
         event_mode = shelter_event_mode;
         draw_cursor_flag = shelter_draw_cursor_flag;
         if ( event_mode & WAIT_BUTTON_MODE ){
-            SDL_WarpMouse( shelter_mouse_state.x, shelter_mouse_state.y );
+            int x2, y2;
+            SDL_RenderLogicalToWindow(renderer, shelter_mouse_state.x, shelter_mouse_state.y, &x2, &y2);
+            SDL_WarpMouseInWindow(window, (int)x2 + 2, (int)y2 + 2);
         }
     }
     display_mode = shelter_display_mode;
@@ -261,14 +263,14 @@ void ONScripterLabel::executeSystemMenu()
 
 void ONScripterLabel::executeSystemSkip()
 {
-    skip_mode |= SKIP_NORMAL;
+    SetSkipMode(skip_mode | SKIP_NORMAL);
     leaveSystemCall();
 }
 
 void ONScripterLabel::executeSystemAutomode()
 {
-    automode_flag = true;
-    skip_mode &= ~SKIP_NORMAL;
+    SetAutomode(true);
+    SetSkipMode(skip_mode & ~SKIP_NORMAL);
     printf("systemcall_automode: change to automode\n");
     leaveSystemCall();
 }

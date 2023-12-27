@@ -54,9 +54,8 @@ SDL_Surface *ONScripterLabel::loadImage( char *filename, bool *has_alpha )
 
     if ( has_alpha ){
         *has_alpha = (tmp->format->Amask != 0);
-        if (!(*has_alpha) && (tmp->flags & SDL_SRCCOLORKEY)){
+        if (!(*has_alpha) && SDL_GetColorKey(tmp, &colorkey) > -1){
             has_colorkey = true;
-            colorkey = tmp->format->colorkey;
             if (tmp->format->palette){
                 //palette will be converted to RGBA, so don't do colorkey check
                 has_colorkey = false;
@@ -420,47 +419,16 @@ void ONScripterLabel::alphaBlendText( SDL_Surface *dst_surface, SDL_Rect dst_rec
 
     /* ---------------------------------------- */
 
-    SDL_LockSurface( dst_surface );
-    SDL_LockSurface( txt_surface );
+//    SDL_LockSurface( dst_surface );
+//    SDL_LockSurface( txt_surface );
 
-#ifdef BPP16
-    Uint32 src_color = ((color.r >> RLOSS) << RSHIFT) |
-                       ((color.g >> GLOSS) << GSHIFT) |
-                       (color.b >> BLOSS);
-    src_color = (src_color | src_color << 16) & BLENDMASK;
-#else
-    Uint32 src_color1 = color.r << RSHIFT | color.b;
-    Uint32 src_color2 = color.g << GSHIFT;
-    Uint32 src_color3 = src_color1 | src_color2;
-#endif
+    SDL_SetSurfaceColorMod(txt_surface, color.r, color.g, color.b);
+    SDL_SetSurfaceAlphaMod(txt_surface, 0xff);
 
-    ONSBuf *dst_buffer = (ONSBuf *)dst_surface->pixels +
-                         dst_surface->w * dst_rect.y + dst_rect.x;
+    SDL_BlitSurface(txt_surface, NULL, dst_surface, &dst_rect);
 
-    if (!rotate_flag){
-        unsigned char *src_buffer = (unsigned char*)txt_surface->pixels +
-                                    txt_surface->pitch * y2 + x2;
-        for ( int i=dst_rect.h ; i!=0 ; i-- ){
-            for ( int j=dst_rect.w ; j!=0 ; j--, dst_buffer++, src_buffer++ ){
-                BLEND_TEXT();
-            }
-            dst_buffer += dst_surface->w - dst_rect.w;
-            src_buffer += txt_surface->pitch - dst_rect.w;
-        }
-    }
-    else{
-        for ( int i=0 ; i<dst_rect.h ; i++ ){
-            unsigned char *src_buffer = (unsigned char*)txt_surface->pixels + txt_surface->pitch*(txt_surface->h - x2 - 1) + y2 + i;
-            for ( int j=dst_rect.w ; j!=0 ; j--, dst_buffer++ ){
-                BLEND_TEXT();
-                src_buffer -= txt_surface->pitch;
-            }
-            dst_buffer += dst_surface->w - dst_rect.w;
-        }
-    }
-    
-    SDL_UnlockSurface( txt_surface );
-    SDL_UnlockSurface( dst_surface );
+//    SDL_UnlockSurface( txt_surface );
+//    SDL_UnlockSurface( dst_surface );
 }
 
 void ONScripterLabel::makeNegaSurface( SDL_Surface *surface, SDL_Rect &clip )

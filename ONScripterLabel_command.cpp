@@ -760,7 +760,7 @@ int ONScripterLabel::spbtnCommand()
 
 int ONScripterLabel::skipoffCommand()
 {
-    skip_mode &= ~SKIP_NORMAL;
+    SetSkipMode(skip_mode & ~SKIP_NORMAL);
 
     return RET_CONTINUE;
 }
@@ -1195,8 +1195,8 @@ int ONScripterLabel::selectCommand()
         setCurrentLabel( "customsel" );
         return RET_CONTINUE;
     }
-    skip_mode &= ~SKIP_NORMAL;
-    automode_flag = false;
+    SetSkipMode(skip_mode & ~SKIP_NORMAL);
+    SetAutomode(false);
     sentence_font.xy[0] = xy[0];
     sentence_font.xy[1] = xy[1];
 
@@ -1902,7 +1902,9 @@ int ONScripterLabel::movemousecursorCommand()
     int x = StretchPosX(script_h.readInt());
     int y = StretchPosY(script_h.readInt());
 
-    SDL_WarpMouse( x, y );
+    int x2, y2;
+    SDL_RenderLogicalToWindow(renderer, x, y, &x2, &y2);
+    SDL_WarpMouseInWindow(window, (int)x2 + 2, (int)y2 + 2);
 
     return RET_CONTINUE;
 }
@@ -1944,8 +1946,8 @@ int ONScripterLabel::monocroCommand()
 
 int ONScripterLabel::minimizewindowCommand()
 {
-#ifndef PSP
-    SDL_WM_IconifyWindow();
+#if !defined(PSP) && !defined(__ANDROID__)
+    SDL_MinimizeWindow(window);
 #endif
 
     return RET_CONTINUE;
@@ -1980,16 +1982,6 @@ int ONScripterLabel::mesboxCommand()
 int ONScripterLabel::menu_windowCommand()
 {
     if ( fullscreen_mode ){
-#ifndef PSP
-        if (async_movie) SMPEG_pause( async_movie );
-        screen_surface = SDL_SetVideoMode( screen_width, screen_height, screen_bpp, DEFAULT_VIDEO_SURFACE_FLAG );
-        SDL_Rect rect = {0, 0, screen_width, screen_height};
-        flushDirect( rect, refreshMode() );
-        if (async_movie){
-            SMPEG_setdisplay( async_movie, screen_surface, NULL, NULL );
-            SMPEG_play( async_movie );
-        }
-#endif
         fullscreen_mode = false;
     }
 
@@ -2015,22 +2007,15 @@ int ONScripterLabel::menu_waveoffCommand()
 int ONScripterLabel::menu_fullCommand()
 {
     if ( !fullscreen_mode ){
-#ifndef PSP
-        if (async_movie) SMPEG_pause( async_movie );
-        screen_surface = SDL_SetVideoMode( screen_width, screen_height, screen_bpp, DEFAULT_VIDEO_SURFACE_FLAG|SDL_FULLSCREEN );
-        if (screen_surface)
+#if !defined(PSP) && !defined(__ANDROID)
+        if (!SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP))
             fullscreen_mode = true;
         else {
             fprintf(stderr, "*** menu_full: Error: %s (using windowed surface instead) ***\n", SDL_GetError());
-            screen_surface = SDL_SetVideoMode( screen_width, screen_height, screen_bpp, DEFAULT_VIDEO_SURFACE_FLAG );
             fullscreen_mode = false;
         }
         SDL_Rect rect = {0, 0, screen_width, screen_height};
         flushDirect( rect, refreshMode() );
-        if (async_movie){
-            SMPEG_setdisplay( async_movie, screen_surface, NULL, NULL );
-            SMPEG_play( async_movie );
-        }
 #else
         fullscreen_mode = true;
 #endif
@@ -2041,7 +2026,7 @@ int ONScripterLabel::menu_fullCommand()
 
 int ONScripterLabel::menu_click_pageCommand()
 {
-    skip_mode |= SKIP_TO_EOP;
+    SetSkipMode(skip_mode | SKIP_TO_EOP);
     printf("menu_click_page: enabling page-at-once mode\n");
 
     return RET_CONTINUE;
@@ -2049,7 +2034,7 @@ int ONScripterLabel::menu_click_pageCommand()
 
 int ONScripterLabel::menu_click_defCommand()
 {
-    skip_mode &= ~SKIP_TO_EOP;
+    SetSkipMode(skip_mode & ~SKIP_TO_EOP);
     printf("menu_click_def: disabling page-at-once mode\n");
 
     return RET_CONTINUE;
@@ -2057,8 +2042,8 @@ int ONScripterLabel::menu_click_defCommand()
 
 int ONScripterLabel::menu_automodeCommand()
 {
-    automode_flag = true;
-    skip_mode &= ~SKIP_NORMAL;
+    SetAutomode(true);
+    SetSkipMode(skip_mode & ~SKIP_NORMAL);
     printf("menu_automode: change to automode\n");
 
     return RET_CONTINUE;
@@ -2390,8 +2375,8 @@ int ONScripterLabel::loadgameCommand()
             saveon_flag = true;
             internal_saveon_flag = true;
         }
-        skip_mode &= ~SKIP_NORMAL;
-        automode_flag = false;
+        SetSkipMode(skip_mode & ~SKIP_NORMAL);
+        SetAutomode(false);
         deleteButtonLink();
         deleteSelectLink();
         key_pressed_flag = false;
@@ -3902,7 +3887,7 @@ int ONScripterLabel::clickCommand()
     if (skip_mode & SKIP_NORMAL)
         return RET_CONTINUE;
 
-    skip_mode &= ~SKIP_TO_WAIT;
+    SetSkipMode(skip_mode & ~SKIP_TO_WAIT);
     key_pressed_flag = false;
 
     clickstr_state = CLICK_WAIT;
@@ -4099,7 +4084,7 @@ int ONScripterLabel::captionCommand()
     setStr( &wm_icon_string,  buf2 );
     delete[] buf2;
     //printf("caption (utf8): '%s'\n", wm_title_string);
-    SDL_WM_SetCaption( wm_title_string, wm_icon_string );
+    SDL_SetWindowTitle(window, wm_title_string);
 #ifdef WIN32
     //convert from UTF-8 to Wide (Unicode) and thence to system ANSI
     len = MultiByteToWideChar(CP_UTF8, 0, wm_title_string, -1, NULL, 0);
@@ -4163,7 +4148,7 @@ int ONScripterLabel::btnwaitCommand()
 
     if ( !( skip_flag && textbtn_flag ) ) {
         shortcut_mouse_line = 0;
-        skip_mode &= ~SKIP_NORMAL;
+        SetSkipMode(skip_mode & ~SKIP_NORMAL);
 
         if (txtbtn_show) txtbtn_visible = true;
 
@@ -4316,7 +4301,7 @@ int ONScripterLabel::btndefCommand()
 #else
             setupAnimationInfo( &btndef_info );
 #endif
-            SDL_SetAlpha( btndef_info.image_surface, DEFAULT_BLIT_FLAG, SDL_ALPHA_OPAQUE );
+            SDL_SetSurfaceAlphaMod( btndef_info.image_surface, SDL_ALPHA_OPAQUE );
         }
     }
 
@@ -4418,8 +4403,10 @@ int ONScripterLabel::bltCommand()
         SDL_Rect dst_rect = {dx,dy,dw,dh};
 
         SDL_BlitSurface( btndef_info.image_surface, &src_rect, screen_surface, &dst_rect );
-        SDL_UpdateRect( screen_surface, dst_rect.x, dst_rect.y, dst_rect.w, dst_rect.h );
-        dirty_rect.clear();
+        SDL_UpdateTexture(screen, NULL, screen_surface->pixels, screen_surface->pitch);
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, screen, NULL, NULL);
+        SDL_RenderPresent(renderer);
     }
     else{
         SDL_LockSurface(accumulation_surface);

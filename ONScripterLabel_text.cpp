@@ -197,8 +197,8 @@ SDL_Surface *ONScripterLabel::renderGlyph(TTF_Font *font, Uint16 text)
        variables. 32 bit operations should be faster than 24 bit ones anyway.
        Users will be delighted by this 0.0000001 microsecond increase in speed.
      (contribution by Andrius, March 2010) */
-    static SDL_Color fcol={0xff, 0xff, 0xff, 0xff}, bcol={0, 0, 0, 0};
-    gc->surface = TTF_RenderGlyph_Shaded( font, text, fcol, bcol );
+    static SDL_Color fcol={0xff, 0xff, 0xff, 0xff};
+    gc->surface = TTF_RenderGlyph32_Blended( font, text, fcol );
 
     return gc->surface;
 }
@@ -230,9 +230,9 @@ void ONScripterLabel::drawGlyph( SDL_Surface *dst_surface, Fontinfo *info, SDL_C
         (info->is_bold?TTF_STYLE_BOLD:TTF_STYLE_NORMAL) )
         TTF_SetFontStyle( (TTF_Font*)info->ttf_font, (info->is_bold?TTF_STYLE_BOLD:TTF_STYLE_NORMAL));
 #endif
-    TTF_GlyphMetrics( (TTF_Font*)info->ttf_font, unicode,
+    TTF_GlyphMetrics32( (TTF_Font*)info->ttf_font, unicode,
                       &minx, &maxx, &miny, &maxy, &advanced );
-    //printf("min %d %d %d %d %d %d\n", minx, maxx, miny, maxy, advanced,TTF_FontAscent((TTF_Font*)info->ttf_font)  );
+//    SDL_Log("min %c %d %d %d %d %d %d\n", unicode, minx, maxx, miny, maxy, advanced,TTF_FontAscent((TTF_Font*)info->ttf_font)  );
 
     SDL_Surface *tmp_surface = renderGlyph( (TTF_Font*)info->ttf_font, unicode );
 
@@ -246,17 +246,17 @@ void ONScripterLabel::drawGlyph( SDL_Surface *dst_surface, Fontinfo *info, SDL_C
     //Mion: to display vertical text more cleanly
     if ( (info->getTateyokoMode() == Fontinfo::TATE_MODE) &&
          isTranslationRequired(text) ){
-        dst_rect.x = xy[0] + ExpandPos(info->font_size_xy[0]) - maxx;
-        dst_rect.y = xy[1] + minx;
+        dst_rect.x = xy[0] + ExpandPos(info->font_size_xy[0]);
+        dst_rect.y = xy[1];
     }
     else if ( rotate_flag ) {
         dst_rect.x = xy[0] + ExpandPos(info->font_size_xy[0]) -
-                     TTF_FontAscent((TTF_Font*)info->ttf_font) + miny;
-        dst_rect.y = xy[1] + minx;
+                     TTF_FontAscent((TTF_Font*)info->ttf_font);
+        dst_rect.y = xy[1];
     }
     else {
-        dst_rect.x = xy[0] + minx;
-        dst_rect.y = xy[1] + TTF_FontAscent((TTF_Font*)info->ttf_font) - maxy;
+        dst_rect.x = xy[0];
+        dst_rect.y = xy[1];// + TTF_FontAscent((TTF_Font*)info->ttf_font);
     }
 
     if ( shadow_flag ){
@@ -284,7 +284,7 @@ void ONScripterLabel::drawChar( char* text, Fontinfo *info, bool flush_flag,
                                 bool lookback_flag, SDL_Surface *surface,
                                 AnimationInfo *cache_info, int abs_offset, SDL_Rect *clip )
 {
-    //printf("draw %x-%x-%x-%x[%s] %d, %d\n", text[0], text[1], text[2], text[3], text, info->xy[0], info->xy[1] );
+    //SDL_Log("draw %x-%x-%x-%x[%s] %d, %d\n", text[0], text[1], text[2], text[3], text, info->xy[0], info->xy[1] );
 
     if ( info->ttf_font == NULL ){
         if ( info->openFont( font_file, screen_ratio1, screen_ratio2 ) == NULL ){
@@ -356,9 +356,9 @@ void ONScripterLabel::drawChar( char* text, Fontinfo *info, bool flush_flag,
             info->addShadeArea(dst_rect, shade_distance);
             dirty_rect.add( dst_rect );
         }
-        else if ( flush_flag ){
+        else if (flush_flag) {
             info->addShadeArea(dst_rect, shade_distance);
-            flushDirect( dst_rect, REFRESH_NONE_MODE );
+            flushDirect( dst_rect, REFRESH_NONE_MODE);
         }
     }
 
@@ -701,7 +701,7 @@ bool ONScripterLabel::doClickEnd()
     draw_cursor_flag = true;
 
     if (!((skip_mode & SKIP_TO_EOL) && clickskippage_flag))
-        skip_mode &= ~(SKIP_TO_WAIT | SKIP_TO_EOL);
+        SetSkipMode(skip_mode & ~(SKIP_TO_WAIT | SKIP_TO_EOL));
 
     if ( automode_flag ){
         event_mode =  WAIT_TEXT_MODE | WAIT_INPUT_MODE |
@@ -729,7 +729,7 @@ bool ONScripterLabel::doClickEnd()
 bool ONScripterLabel::clickWait()
 {
     int tmp_skip = skip_mode;
-    skip_mode &= ~(SKIP_TO_WAIT | SKIP_TO_EOL);
+    SetSkipMode(skip_mode & ~(SKIP_TO_WAIT | SKIP_TO_EOL));
     flush( REFRESH_NONE_MODE );
 
     //Mion: apparently NScr doesn't call textgosub on clickwaits
@@ -737,7 +737,7 @@ bool ONScripterLabel::clickWait()
     if ( (skip_mode & (SKIP_NORMAL | SKIP_TO_EOP)) ||
          ((tmp_skip & SKIP_TO_EOL) && clickskippage_flag) ||
           ctrl_pressed_status ){
-        skip_mode = tmp_skip;
+        SetSkipMode(tmp_skip);
         clickstr_state = CLICK_NONE;
         num_chars_in_sentence = 0;
         if ( textgosub_label && (script_h.getNext()[0] != 0x0a))
@@ -751,7 +751,7 @@ bool ONScripterLabel::clickWait()
 
         if ( textgosub_label ){
             if ((tmp_skip & SKIP_TO_EOL) && clickskippage_flag)
-                skip_mode = tmp_skip;
+                SetSkipMode(tmp_skip);
             saveoffCommand();
             clickstr_state = CLICK_NONE;
 
@@ -780,7 +780,7 @@ bool ONScripterLabel::clickWait()
 
 bool ONScripterLabel::clickNewPage()
 {
-    skip_mode &= ~(SKIP_TO_WAIT | SKIP_TO_EOL);
+    SetSkipMode(skip_mode & ~(SKIP_TO_WAIT | SKIP_TO_EOL));
     flush( REFRESH_NONE_MODE );
     clickstr_state = CLICK_NEWPAGE;
 
@@ -977,11 +977,11 @@ int ONScripterLabel::textCommand()
 
 void ONScripterLabel::processEOT()
 {
-    skip_mode &= ~SKIP_TO_WAIT;
+    SetSkipMode(skip_mode & ~SKIP_TO_WAIT);
     if ((skip_mode & SKIP_TO_EOL) || (sentence_font.wait_time == 0)){
         flush(refreshMode());
         if (!clickskippage_flag && !skip_past_newline)
-            skip_mode &= ~SKIP_TO_EOL;
+            SetSkipMode(skip_mode & ~SKIP_TO_EOL);
     }
     indent_offset = 0;
     if (!sentence_font.isLineEmpty() && !new_line_skip_flag){
@@ -1220,7 +1220,7 @@ bool ONScripterLabel::processText()
             flush(refreshMode());
             if ( flag && in_skip) {
                 if (!clickskippage_flag)
-                    skip_mode &= ~(SKIP_TO_EOL | SKIP_TO_WAIT);
+                    SetSkipMode(skip_mode & ~(SKIP_TO_EOL | SKIP_TO_WAIT));
             }
             else{
                 if (!flag && in_skip) {
@@ -1232,7 +1232,7 @@ bool ONScripterLabel::processText()
                     }
                 }
                 if (!clickskippage_flag)
-                    skip_mode &= ~(SKIP_TO_EOL | SKIP_TO_WAIT);
+                    SetSkipMode(skip_mode & ~(SKIP_TO_EOL | SKIP_TO_WAIT));
                 event_mode |= WAIT_TEXTOUT_MODE;
                 if ( flag ) event_mode |= WAIT_INPUT_MODE;
                 key_pressed_flag = false;

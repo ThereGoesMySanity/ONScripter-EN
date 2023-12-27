@@ -412,112 +412,20 @@ void AnimationInfo::blendOnSurface( SDL_Surface *dst_surface, int dst_x, int dst
     SDL_Rect dst_rect = {dst_x, dst_y, pos.w, pos.h}, src_rect;
     if ( doClipping( &dst_rect, &clip, &src_rect ) ) return;
 
+    src_rect.x += image_surface->w*current_cell/num_of_cells;
+
     /* ---------------------------------------- */
     
-    SDL_LockSurface( dst_surface );
-    SDL_LockSurface( image_surface );
-    
-#ifdef BPP16
-    const int total_width = image_surface->pitch / 2;
-#else
-    const int total_width = image_surface->pitch / 4;
-#endif
-    ONSBuf *src_buffer = (ONSBuf *)image_surface->pixels + total_width * src_rect.y + image_surface->w*current_cell/num_of_cells + src_rect.x;
-    ONSBuf *dst_buffer = (ONSBuf *)dst_surface->pixels + dst_surface->w * dst_rect.y + dst_rect.x;
-#ifdef BPP16
-    unsigned char *alphap = alpha_buf + image_surface->w * src_rect.y + image_surface->w*current_cell/num_of_cells + src_rect.x;
-#else
-#if SDL_BYTEORDER == SDL_LIL_ENDIAN
-    unsigned char *alphap = (unsigned char *)src_buffer + 3;
-#else
-    unsigned char *alphap = (unsigned char *)src_buffer;
-#endif
-#endif
-
     if (blending_mode == BLEND_NORMAL) {
-        if ((trans_mode == TRANS_COPY) && (alpha == 256)) {
-            ONSBuf* srcmax = (ONSBuf*)image_surface->pixels +
-                image_surface->w * image_surface->h;
-
-            for (int i=dst_rect.h ; i!=0 ; i--){
-                for (int j=dst_rect.w ; j!=0 ; j--, src_buffer++, dst_buffer++){
-                    // If we've run out of source area, ignore the remainder.
-                    if (src_buffer >= srcmax) goto break2;
-                    SET_PIXEL(*src_buffer, 0xff);
-                }
-                src_buffer += total_width - dst_rect.w;
-#ifdef BPP16
-                alphap += image_surface->w - dst_rect.w;
-#else
-                alphap += (image_surface->w - dst_rect.w)*4;
-#endif
-                dst_buffer += dst_surface->w  - dst_rect.w;
-            }
-        } else {
-            ONSBuf* srcmax = (ONSBuf*)image_surface->pixels +
-                image_surface->w * image_surface->h;
-
-            for (int i=dst_rect.h ; i!=0 ; i--){
-#if !defined(BPP16)
-                if (src_buffer >= srcmax) goto break2;
-                ons_gfx::imageFilterBlend(dst_buffer, src_buffer, alphap, alpha, dst_rect.w);
-                src_buffer += total_width;
-                dst_buffer += dst_surface->w;
-                alphap += (image_surface->w)*4;
-#else //!BPP16
-                for (int j=dst_rect.w ; j!=0 ; j--, src_buffer++, dst_buffer++){
-                    // If we've run out of source area, ignore the remainder.
-                    if (src_buffer >= srcmax) goto break2;
-                    BLEND_PIXEL();
-                }
-                src_buffer += total_width - dst_rect.w;
-                dst_buffer += dst_surface->w - dst_rect.w;
-#ifdef BPP16
-                alphap += image_surface->w - dst_rect.w;
-#else
-                alphap += (image_surface->w - dst_rect.w)*4;
-#endif //BPP16
-#endif
-            }
-        }
+        SDL_SetSurfaceBlendMode(image_surface, SDL_BLENDMODE_BLEND);
+//        SDL_SetSurfaceAlphaMod(image_surface, alpha);
+        SDL_BlitSurface(image_surface, &src_rect, dst_surface, &dst_rect);
 #ifndef NO_LAYER_EFFECTS // currently only the "rain" layer uses this section
     } else if (blending_mode == BLEND_ADD) {
-#ifndef BPP16
-        if ((trans_mode == TRANS_COPY) && (alpha == 256)) {
-            // "add" the src pix value to the dst
-            Uint8* srcmax = (Uint8*) ((Uint32*)image_surface->pixels +
-                image_surface->w * image_surface->h);
-            Uint8* src_buf = (Uint8*) src_buffer;
-            Uint8* dst_buf = (Uint8*) dst_buffer;
+        SDL_SetSurfaceBlendMode(image_surface, SDL_BLENDMODE_ADD);
+        SDL_SetSurfaceAlphaMod(image_surface, alpha);
+        SDL_BlitSurface(image_surface, &src_rect, dst_surface, &dst_rect);
 
-            for (int i=dst_rect.h ; i!=0 ; i--){
-                if (src_buf >= srcmax) goto break2;
-                ons_gfx::imageFilterAddTo(dst_buf, src_buf, dst_rect.w*4);
-                src_buf += total_width * 4;
-                dst_buf += dst_surface->w * 4;
-            }
-        } else
-#endif //!BPP16
-        {
-            // gotta do additive alpha blending
-            ONSBuf* srcmax = (ONSBuf*)image_surface->pixels +
-                image_surface->w * image_surface->h;
-
-            for (int i=dst_rect.h ; i!=0 ; i--){
-                for (int j=dst_rect.w ; j!=0 ; j--, src_buffer++, dst_buffer++){
-                    // If we've run out of source area, ignore the remainder.
-                    if (src_buffer >= srcmax) goto break2;
-                    ADDBLEND_PIXEL();
-                }
-                src_buffer += total_width - dst_rect.w;
-#ifdef BPP16
-                alphap += image_surface->w - dst_rect.w;
-#else
-                alphap += (image_surface->w - dst_rect.w)*4;
-#endif
-                dst_buffer += dst_surface->w  - dst_rect.w;
-            }
-        }
 #endif // !NO_LAYER_EFFECTS
 #if 0 // currently no non-affine routines use subtractive blending
     } else if (blending_mode == BLEND_SUB) {
@@ -560,9 +468,6 @@ void AnimationInfo::blendOnSurface( SDL_Surface *dst_surface, int dst_x, int dst
 #endif //0
     }
 
-break2:
-    SDL_UnlockSurface( image_surface );
-    SDL_UnlockSurface( dst_surface );
 }
 
 void AnimationInfo::blendOnSurface2( SDL_Surface *dst_surface, int dst_x, int dst_y,
@@ -674,7 +579,7 @@ void AnimationInfo::blendText( SDL_Surface *surface, int dst_x, int dst_y,
         dst_rect.w = surface->h;
         dst_rect.h = surface->w;
     }
-    SDL_Rect src_rect = {0, 0, 0, 0};
+    SDL_Rect src_rect = {0, 0, surface->w, surface->h};
     SDL_Rect clipped_rect;
 
     /* ---------------------------------------- */
@@ -695,63 +600,11 @@ void AnimationInfo::blendText( SDL_Surface *surface, int dst_x, int dst_y,
     src_rect.y += clipped_rect.y;
 
     /* ---------------------------------------- */
-    
-    SDL_LockSurface( surface );
-    SDL_LockSurface( image_surface );
-    
-#ifdef BPP16
-    int total_width = image_surface->pitch / 2;
-    Uint32 src_color = ((color.r >> RLOSS) << RSHIFT) |
-                       ((color.g >> GLOSS) << GSHIFT) |
-                       (color.b >> BLOSS);
-    src_color = (src_color | src_color << 16) & BLENDMASK;
-#else
-    int total_width = image_surface->pitch / 4;
-    Uint32 src_color1 = color.r << RSHIFT | color.b;
-    Uint32 src_color2 = color.g << GSHIFT;
-    Uint32 src_color3 = src_color1 | src_color2 | AMASK;
-#endif
-    ONSBuf *dst_buffer = (ONSBuf *)image_surface->pixels +
-                         total_width * dst_rect.y +
-                         image_surface->w*current_cell/num_of_cells +
-                         dst_rect.x;
-#ifdef BPP16
-    unsigned char *alphap = alpha_buf + image_surface->w * dst_rect.y +
-                            image_surface->w*current_cell/num_of_cells +
-                            dst_rect.x;
-#endif
-    if (!rotate_flag){
-        unsigned char *src_buffer = (unsigned char*)surface->pixels +
-                                    surface->pitch*src_rect.y + src_rect.x;
-        for ( int i=dst_rect.h ; i!=0 ; i-- ){
-            for ( int j=dst_rect.w ; j!=0 ; j--, dst_buffer++, src_buffer++ ){
-                BLEND_TEXT_ALPHA();
-            }
-            dst_buffer += total_width - dst_rect.w;
-#ifdef BPP16
-            alphap += image_surface->w - dst_rect.w;
-#endif
-            src_buffer += surface->pitch - dst_rect.w;
-        }
-    }
-    else{
-        for ( int i=0 ; i<dst_rect.h ; i++ ){
-            unsigned char *src_buffer = (unsigned char*)surface->pixels +
-                                        surface->pitch*(surface->h - src_rect.x - 1) +
-                                        src_rect.y + i;
-            for ( int j=dst_rect.w ; j!=0 ; j--, dst_buffer++ ){
-                BLEND_TEXT_ALPHA();
-                src_buffer -= surface->pitch;
-            }
-            dst_buffer += total_width - dst_rect.w;
-#ifdef BPP16
-            alphap += image_surface->w - dst_rect.w;
-#endif
-        }
-    }
 
-    SDL_UnlockSurface( image_surface );
-    SDL_UnlockSurface( surface );
+    SDL_SetSurfaceColorMod(surface, color.r, color.g, color.b);
+    SDL_SetSurfaceAlphaMod(surface, 0xff);
+
+    SDL_BlitSurface(surface, &src_rect, image_surface, &dst_rect);
 }
 
 void AnimationInfo::calcAffineMatrix()
@@ -869,31 +722,8 @@ void AnimationInfo::copySurface( SDL_Surface *surface, SDL_Rect *src_rect, SDL_R
 void AnimationInfo::fill( Uint8 r, Uint8 g, Uint8 b, Uint8 a )
 {
     if (!image_surface) return;
-    
-    SDL_LockSurface( image_surface );
-    ONSBuf *dst_buffer = (ONSBuf *)image_surface->pixels;
 
-#ifdef BPP16
-    Uint32 rgb = ((r>>RLOSS) << RSHIFT) | ((g>>GLOSS) << GSHIFT) | (b>>BLOSS);
-    unsigned char *alphap = alpha_buf;
-    int dst_margin = image_surface->w % 2;
-#else
-    Uint32 rgb = (r << RSHIFT) | (g << GSHIFT) | b;
-
-#if SDL_BYTEORDER == SDL_LIL_ENDIAN
-    unsigned char *alphap = (unsigned char *)dst_buffer + 3;
-#else
-    unsigned char *alphap = (unsigned char *)dst_buffer;
-#endif
-    int dst_margin = 0;
-#endif
-
-    for (int i=image_surface->h ; i!=0 ; i--){
-        for (int j=image_surface->w ; j!=0 ; j--, dst_buffer++)
-            SET_PIXEL(rgb, a);
-        dst_buffer += dst_margin;
-    }
-    SDL_UnlockSurface( image_surface );
+    SDL_FillRect(image_surface, NULL, SDL_MapRGBA(image_surface->format, r, g, b, a));
 }
 
 SDL_Surface *AnimationInfo::setupImageAlpha( SDL_Surface *surface,
@@ -990,33 +820,19 @@ SDL_Surface *AnimationInfo::setupImageAlpha( SDL_Surface *surface,
             SDL_UnlockSurface( surface_m );
         }
     }
-    else if ( trans_mode == TRANS_TOPLEFT ||
-              trans_mode == TRANS_TOPRIGHT ||
-              trans_mode == TRANS_DIRECT ){
-        const int trans_value = RGBMASK & MEDGRAY;
-        for (i=h ; i!=0 ; i--){
-            for (j=w ; j!=0 ; j--, buffer++, alphap+=4){
-                if ( (*buffer & RGBMASK) == ref_color )
-                    *buffer = trans_value;
-                else
-                    *alphap = 0xff;
-            }
-        }
-    }
-    else if ( trans_mode == TRANS_STRING ){
-        for (i=h ; i!=0 ; i--){
-            for (j=w ; j!=0 ; j--, buffer++, alphap+=4)
-                *alphap = *buffer >> 24;
-        }
-    }
     else if ( trans_mode != TRANS_ALPHA ){ // TRANS_COPY
         for (i=h ; i!=0 ; i--){
             for (j=w ; j!=0 ; j--, buffer++, alphap+=4)
                 *alphap = 0xff;
         }
     }
-
     SDL_UnlockSurface( surface );
+
+    if ( trans_mode == TRANS_TOPLEFT ||
+              trans_mode == TRANS_TOPRIGHT ||
+              trans_mode == TRANS_DIRECT ){
+        SDL_SetColorKey(surface, SDL_TRUE, ref_color);
+    }
 
     return surface;
 }

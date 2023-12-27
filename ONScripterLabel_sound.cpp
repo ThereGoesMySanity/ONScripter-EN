@@ -367,7 +367,7 @@ int ONScripterLabel::playSound(const char *filename, int format, bool loop_flag,
             }
         }
 
-        mp3_sample = SMPEG_new_rwops( SDL_RWFromMem( buffer + id3v2_size, length - id3v2_size ), NULL, 0 );
+        mp3_sample = SMPEG_new_rwops( SDL_RWFromMem( buffer + id3v2_size, length - id3v2_size ), NULL, true, 0 );
 
         if (playMP3() == 0){
             music_buffer = buffer;
@@ -408,29 +408,20 @@ void ONScripterLabel::playCDAudio()
 {
     if (!audio_open_flag) return;
 
-    if ( cdaudio_flag ){
-        if ( cdrom_info ){
-            int length = cdrom_info->track[current_cd_track - 1].length / 75;
-            SDL_CDPlayTracks( cdrom_info, current_cd_track - 1, 0, 1, 0 );
-            timer_cdaudio_id = SDL_AddTimer( length * 1000, cdaudioCallback, NULL );
-        }
-    }
-    else{
-        //if CD audio is not available, search the "cd" subfolder
-        //for a file named "track01.mp3" or similar, depending on the
-        //track number; check for mp3, ogg and wav files
-        char filename[256];
-        sprintf( filename, "cd\\track%2.2d.mp3", current_cd_track );
-        int ret = playSound( filename, SOUND_MP3, cd_play_loop_flag );
-        if (ret == SOUND_MP3) return;
+    //if CD audio is not available, search the "cd" subfolder
+    //for a file named "track01.mp3" or similar, depending on the
+    //track number; check for mp3, ogg and wav files
+    char filename[256];
+    sprintf( filename, "cd\\track%2.2d.mp3", current_cd_track );
+    int ret = playSound( filename, SOUND_MP3, cd_play_loop_flag );
+    if (ret == SOUND_MP3) return;
 
-        sprintf( filename, "cd\\track%2.2d.ogg", current_cd_track );
-        ret = playSound( filename, SOUND_OGG_STREAMING, cd_play_loop_flag );
-        if (ret == SOUND_OGG_STREAMING) return;
+    sprintf( filename, "cd\\track%2.2d.ogg", current_cd_track );
+    ret = playSound( filename, SOUND_OGG_STREAMING, cd_play_loop_flag );
+    if (ret == SOUND_OGG_STREAMING) return;
 
-        sprintf( filename, "cd\\track%2.2d.wav", current_cd_track );
-        ret = playSound( filename, SOUND_WAVE, cd_play_loop_flag, MIX_BGM_CHANNEL );
-    }
+    sprintf( filename, "cd\\track%2.2d.wav", current_cd_track );
+    ret = playSound( filename, SOUND_WAVE, cd_play_loop_flag, MIX_BGM_CHANNEL );
 }
 
 int ONScripterLabel::playWave(Mix_Chunk *chunk, int format, bool loop_flag, int channel)
@@ -662,6 +653,20 @@ int ONScripterLabel::setVolumeMute( bool do_mute )
     return 0;
 }
 
+typedef struct
+{
+    SMPEG_Frame *frame;
+    int frameCount;
+    SDL_mutex *lock;
+} update_context;
+
+void update(void *data, SMPEG_Frame *frame)
+{
+    update_context *context = (update_context *)data;
+    context->frame = frame;
+    ++context->frameCount;
+}
+
 int ONScripterLabel::playMPEG( const char *filename, bool async_flag, bool use_pos, int xpos, int ypos, int width, int height )
 {
     int ret = 0;
@@ -696,7 +701,7 @@ int ONScripterLabel::playMPEG( const char *filename, bool async_flag, bool use_p
         return 0;
     }
 
-    SMPEG *mpeg_sample = SMPEG_new_rwops( SDL_RWFromMem( movie_buffer, length ), NULL, 0 );
+    SMPEG *mpeg_sample = SMPEG_new_rwops( SDL_RWFromMem( movie_buffer, length ), NULL, true, 0 );
     char *errstr = SMPEG_error( mpeg_sample );
     if (errstr){
         
@@ -709,7 +714,20 @@ int ONScripterLabel::playMPEG( const char *filename, bool async_flag, bool use_p
     }
     else {
         SMPEG_Info info;
+        update_context context;
+        SDL_Texture* texture;
+        SDL_Rect screen_rect = {0, 0, screen_width, screen_height};
+        int frameCount;
+        context.frameCount = frameCount = 0;
+        context.lock = SDL_CreateMutex();
+
         SMPEG_getinfo(mpeg_sample, &info);
+
+        int texture_width = (info.width + 15) & ~15;
+        int texture_height = (info.height + 15) & ~15;
+        texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_YV12, SDL_TEXTUREACCESS_STREAMING,
+                                    texture_width, texture_height);
+
         if (info.has_audio){
             stopBGM( false );
             SMPEG_enableaudio( mpeg_sample, 0 );
@@ -740,18 +758,21 @@ int ONScripterLabel::playMPEG( const char *filename, bool async_flag, bool use_p
             different_spec = false;
         }
         SMPEG_enablevideo( mpeg_sample, 1 );
-        SMPEG_setdisplay( mpeg_sample, screen_surface, NULL, NULL );
+        SMPEG_setdisplay( mpeg_sample, update, &context, context.lock );
         if (use_pos) {
-            SMPEG_scaleXY( mpeg_sample, width, height );
-            SMPEG_move( mpeg_sample, xpos, ypos );
+            screen_rect.x = xpos;
+            screen_rect.y = ypos;
+            screen_rect.w = width;
+            screen_rect.h = height;
         }
         else if (nomovieupscale_flag && (info.width < screen_width) &&
                  (info.height < screen_height)) {
             //"no-movie-upscale" set, so use its native
             //width/height & center within the screen
-            SMPEG_scaleXY( mpeg_sample, info.width, info.height );
-            SMPEG_move( mpeg_sample, (screen_width - info.width) / 2,
-                       (screen_height - info.height) / 2 );
+            screen_rect.x = (screen_width - info.width) / 2;
+            screen_rect.y = (screen_height - info.height) / 2;
+            screen_rect.w = info.width;
+            screen_rect.h = info.height;
         }
 #ifdef RCA_SCALE
         //center the movie on the screen, using standard aspect ratio
@@ -802,7 +823,7 @@ int ONScripterLabel::playMPEG( const char *filename, bool async_flag, bool use_p
 
         if (movie_loop_flag)
             SMPEG_loop( mpeg_sample, -1 );
-        SMPEG_play( mpeg_sample );
+            SMPEG_play( mpeg_sample );
 
         if (async_flag){
             async_movie = mpeg_sample;
@@ -821,6 +842,17 @@ int ONScripterLabel::playMPEG( const char *filename, bool async_flag, bool use_p
                 else
                     break;
             }
+            if (context.frameCount > frameCount) {
+                SDL_Rect src = {0, 0, info.width, info.height};
+                SDL_mutexP(context.lock);
+                SDL_UpdateTexture(texture, NULL, context.frame->image, context.frame->image_width);
+                frameCount = context.frameCount;
+                SDL_mutexV(context.lock);
+
+                SDL_RenderClear(renderer);
+                SDL_RenderCopy(renderer, texture, &src, &screen_rect);
+                SDL_RenderPresent(renderer);
+            }
 
             SDL_Event event;
 
@@ -832,19 +864,15 @@ int ONScripterLabel::playMPEG( const char *filename, bool async_flag, bool use_p
                          ((SDL_KeyboardEvent *)&event)->keysym.sym == SDLK_ESCAPE )
                         done_flag = movie_click_flag;
                     else if ( ((SDL_KeyboardEvent *)&event)->keysym.sym == SDLK_f ){
-#ifndef PSP
-                        if ( !SDL_WM_ToggleFullScreen( screen_surface ) ){
-                            SMPEG_pause( mpeg_sample );
-                            SDL_FreeSurface(screen_surface);
-                            if ( fullscreen_mode )
-                                screen_surface = SDL_SetVideoMode( screen_width, screen_height, screen_bpp, DEFAULT_VIDEO_SURFACE_FLAG );
-                            else
-                                screen_surface = SDL_SetVideoMode( screen_width, screen_height, screen_bpp, DEFAULT_VIDEO_SURFACE_FLAG|SDL_FULLSCREEN );
-                            SMPEG_setdisplay( mpeg_sample, screen_surface, NULL, NULL );
-                            SMPEG_play( mpeg_sample );
+#if !defined(PSP) && !defined(__ANDROID__)
+                        if ( fullscreen_mode) {
+                            if ( !SDL_SetWindowFullscreen( window, 0 ) )
+                                fullscreen_mode = false;
+                        } else {
+                            if ( !SDL_SetWindowFullscreen( window, SDL_WINDOW_FULLSCREEN_DESKTOP ) )
+                                fullscreen_mode = true;
                         }
 #endif
-                        fullscreen_mode = !fullscreen_mode;
                     }
                     else if ( ((SDL_KeyboardEvent *)&event)->keysym.sym == SDLK_m ){
                         volume_on_flag = !volume_on_flag;
@@ -868,6 +896,8 @@ int ONScripterLabel::playMPEG( const char *filename, bool async_flag, bool use_p
         ctrl_pressed_status = 0;
 
         stopMovie(mpeg_sample);
+        SDL_DestroyMutex(context.lock);
+        SDL_DestroyTexture(texture);
 
         if (different_spec) {
             //restart mixer with the old audio spec
@@ -935,14 +965,6 @@ void ONScripterLabel::stopMovie(SMPEG *mpeg)
 
 void ONScripterLabel::stopBGM( bool continue_flag )
 {
-    if ( cdaudio_flag && cdrom_info ){
-        extern SDL_TimerID timer_cdaudio_id;
-
-        clearTimer( timer_cdaudio_id );
-        if (SDL_CDStatus( cdrom_info ) >= CD_PLAYING )
-            SDL_CDStop( cdrom_info );
-    }
-
     if ( mp3_sample ){
         SMPEG_stop( mp3_sample );
         Mix_HookMusic( NULL, NULL );

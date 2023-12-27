@@ -32,6 +32,7 @@
 
 #include "SDL.h"
 #include "SDL_main.h"
+#include "jniState.h"
 
 #include <cstdio>
 
@@ -438,6 +439,10 @@ int main( int argc, char **argv )
 #ifdef MACOSX
     //Check for application bundle on Mac OS X
     ons.checkBundled();
+#endif
+
+#ifdef __ANDROID__
+    JNI_SetOnsPtr(&ons);
 #endif
 
     // ----------------------------------------

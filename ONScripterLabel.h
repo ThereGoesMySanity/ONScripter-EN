@@ -50,6 +50,7 @@
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <SDL_mixer.h>
+#include <SDL_video.h>
 
 #ifdef MP3_MAD
 #include "MadWrapper.h"
@@ -57,7 +58,7 @@
 #include <smpeg.h>
 #endif
 
-#define DEFAULT_VIDEO_SURFACE_FLAG (SDL_SWSURFACE)
+#define DEFAULT_VIDEO_SURFACE_FLAG (0)
 
 #define DEFAULT_BLIT_FLAG (0)
 //#define DEFAULT_BLIT_FLAG (SDL_RLEACCEL)
@@ -99,7 +100,7 @@
 
 #define NUM_GLYPH_CACHE 30
 
-#define KEYPRESS_NULL ((SDLKey)(SDLK_LAST+1)) // "null" for keypress variables
+#define KEYPRESS_NULL ((SDL_Keycode)(SDLK_UNKNOWN)) // "null" for keypress variables
 
 class ONScripterLabel : public ScriptParser
 {
@@ -386,6 +387,13 @@ public:
     int resetmenuCommand();
     int layermessageCommand();
 
+    // State
+    void SetSkipMode(int newValue);
+    void SetAutomode(bool newValue);
+    void TrySetNormalSkip(bool newValue);
+    void TrySetEopSkip(bool newValue);
+    void TrySetAutomode(bool newValue);
+
 protected:
     /* ---------------------------------------- */
     /* Event related variables */
@@ -425,13 +433,14 @@ protected:
     bool file_exists(const char *fileName);
     char* create_filepath(DirPaths archive_path, const char* filename);
 
-    SDL_keysym transKey(SDL_keysym key, bool isdown);
+    SDL_Keysym transKey(SDL_Keysym key, bool isdown);
     void variableEditMode( SDL_KeyboardEvent *event );
     bool keyDownEvent( SDL_KeyboardEvent *event );
     void keyUpEvent( SDL_KeyboardEvent *event );
     bool keyPressEvent( SDL_KeyboardEvent *event );
     bool mousePressEvent( SDL_MouseButtonEvent *event );
     bool mouseMoveEvent( SDL_MouseMotionEvent *event );
+    bool mouseWheelEvent( SDL_MouseWheelEvent *event );
     void animEvent();
     void timerEvent();
     void flushEventSub( SDL_Event &event );
@@ -564,7 +573,7 @@ private:
     bool btndown_flag;
     bool transbtn_flag;
 
-    SDLKey last_keypress;
+    SDL_Keycode last_keypress;
 
     void quit(bool no_error=false);
 
@@ -583,6 +592,11 @@ private:
     int display_mode;
     bool did_leavetext;
     int event_mode;
+
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    SDL_Texture *screen;
+
     SDL_Surface *accumulation_surface; // Final image, i.e. picture_surface (+ text_window + text_surface)
     SDL_Surface *backup_surface; // Final image w/o (text_window + text_surface) used in leaveTextDisplayMode()
     SDL_Surface *screen_surface; // Text + Select_image + Tachi image + background
@@ -981,7 +995,6 @@ private:
     char *seqmusic_file_name;
     Mix_Music *seqmusic_info;
 
-    SDL_CD *cdrom_info;
     int current_cd_track;
     bool cd_play_loop_flag;
     bool music_play_loop_flag;

@@ -41,8 +41,7 @@
 #include "ONScripterLabel.h"
 #include "graphics_cpu.h"
 #include "graphics_resize.h"
-#include <cstdio>
-#include <fstream>
+#include <istream>
 
 #ifdef MACOSX
 #include "cocoa_alertbox.h"
@@ -371,11 +370,6 @@ void ONScripterLabel::initSDL()
     }
     atexit(SDL_Quit_Wrapper); // work-around for OS/2
 
-    if( cdaudio_flag && SDL_InitSubSystem( SDL_INIT_CDROM ) < 0 ){
-        errorAndExit("Couldn't initialize CD-ROM", SDL_GetError(), "Init Error", true);
-        return; //dummy
-    }
-
 #if 0
     if(SDL_InitSubSystem( SDL_INIT_JOYSTICK ) == 0 && SDL_JoystickOpen(0) != NULL)
         printf( "Initialize JOYSTICK\n");
@@ -384,8 +378,6 @@ void ONScripterLabel::initSDL()
 #if defined(PSP) || defined(IPODLINUX)
     SDL_ShowCursor(SDL_DISABLE);
 #endif
-
-    SDL_EnableUNICODE(1);
 
     /* ---------------------------------------- */
     /* Initialize SDL */
@@ -454,7 +446,7 @@ void ONScripterLabel::initSDL()
             SDL_FreeSurface(tmp);
         }
 #endif //MACOSX || WIN32
-        SDL_WM_SetIcon(icon, NULL);
+        SDL_SetWindowIcon(window, icon);
     }
     if (icon)
         SDL_FreeSurface(icon);
@@ -465,128 +457,36 @@ void ONScripterLabel::initSDL()
     screen_bpp = 32;
 #endif
 
-#if defined(PDA) && defined(PDA_WIDTH)
-    screen_ratio1 *= PDA_WIDTH;
-    screen_ratio2 *= 320;
-    screen_width   = screen_width  * PDA_WIDTH / 320;
-    screen_height  = screen_height * PDA_WIDTH / 320;
-#elif defined(PDA) && defined(PDA_AUTOSIZE)
-    SDL_Rect **modes;
-    modes = SDL_ListModes(NULL, 0);
-    if (modes == (SDL_Rect **)0){
-        errorAndExit("No Video mode available.", NULL, "Init Error", true);
-        return; //dummy
-    }
-    else if (modes == (SDL_Rect **)-1){
-        // no restriction
-    }
- 	else{
-        int width;
-        if (modes[0]->w * 3 > modes[0]->h * 4)
-            width = (modes[0]->h / 3) * 4;
-        else
-            width = (modes[0]->w / 4) * 4;
-        screen_ratio1 *= width;
-        screen_ratio2 *= 320;
-        screen_width   = screen_width  * width / 320;
-        screen_height  = screen_height * width / 320;
-    }
-#endif
+    setStr(&wm_title_string, DEFAULT_WM_TITLE);
 
-#ifdef RCA_SCALE
-    scr_stretch_x = 1.0;
-    scr_stretch_y = 1.0;
-#endif
-    if (scaled_flag) {
-        const SDL_VideoInfo* info = SDL_GetVideoInfo();
-        int native_width = info->current_w;
-        int native_height = info->current_h;
-        
-        // Resize up to fill screen
-#ifndef RCA_SCALE
-        float scr_stretch_x, scr_stretch_y;
-#endif
-        scr_stretch_x = (float)native_width / (float)screen_width;
-        scr_stretch_y = (float)native_height / (float)screen_height;
-#ifdef RCA_SCALE
-        if (widescreen_flag) {
-            if (scr_stretch_x > scr_stretch_y) {
-                screen_ratio1 = native_height;
-                screen_ratio2 = script_height;
-                scr_stretch_x /= scr_stretch_y;
-                scr_stretch_y = 1.0;
-            } else { 
-                screen_ratio1 = native_width;
-                screen_ratio2 = script_width;
-                scr_stretch_y /= scr_stretch_x;
-                scr_stretch_x = 1.0;
-            }
-            screen_width  = StretchPosX(script_width);
-            screen_height = StretchPosY(script_height);
-        } else
-#endif
-        {
-            // Constrain aspect to same as game
-            if (scr_stretch_x > scr_stretch_y) {
-                screen_ratio1 = native_height;
-                screen_ratio2 = script_height;
-            } else { 
-                screen_ratio1 = native_width;
-                screen_ratio2 = script_width;
-            }
-            scr_stretch_x = scr_stretch_y = 1.0;
-            screen_width  = ExpandPos(script_width);
-            screen_height = ExpandPos(script_height);
-        }
-    }
-#ifdef RCA_SCALE
-    else if (widescreen_flag) {
-        const SDL_VideoInfo* info = SDL_GetVideoInfo();
-        int native_width = info->current_w;
-        int native_height = info->current_h;
-        
-        // Resize to screen aspect ratio
-        const float screen_asp = (float)screen_width / (float)screen_height;
-        const float native_asp = (float)native_width / (float)native_height;
-        const float aspquot = native_asp / screen_asp;
-        if (aspquot >1.01) {
-            // Widescreen; make gamearea wider
-            scr_stretch_x = (float)screen_height * native_asp / (float)screen_width;
-            screen_width = screen_height * native_asp;
-        } else if (aspquot < 0.99) {
-            scr_stretch_y = (float)screen_width / native_asp / (float)screen_height;
-            screen_height = screen_width / native_asp;
-        }
-    }
-#endif
-    screen_surface = SDL_SetVideoMode( screen_width, screen_height, screen_bpp, DEFAULT_VIDEO_SURFACE_FLAG|(fullscreen_mode?SDL_FULLSCREEN:0) );
+    window = SDL_CreateWindow(DEFAULT_WM_TITLE,
+            SDL_WINDOWPOS_UNDEFINED,
+            SDL_WINDOWPOS_UNDEFINED,
+            screen_width, screen_height,
+            DEFAULT_VIDEO_SURFACE_FLAG|(fullscreen_mode?SDL_WINDOW_FULLSCREEN_DESKTOP:0));
 
-    /* ---------------------------------------- */
-    /* Check if VGA screen is available. */
-#if defined(PDA) && (PDA_WIDTH==640)
-    if ( screen_surface == NULL ){
-        screen_ratio1 /= 2;
-        screen_width  /= 2;
-        screen_height /= 2;
-        screen_surface = SDL_SetVideoMode( screen_width, screen_height, screen_bpp, DEFAULT_VIDEO_SURFACE_FLAG|(fullscreen_mode?SDL_FULLSCREEN:0) );
+    if (window != NULL) {
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
     }
-#endif
 
-    if ( screen_surface == NULL ) {
+    if ( renderer == NULL ) {
         snprintf(script_h.errbuf, MAX_ERRBUF_LEN,
                  "Couldn't set %dx%dx%d video mode",
                  screen_width, screen_height, screen_bpp);
         errorAndExit(script_h.errbuf, SDL_GetError(), "Init Error", true);
         return; //dummy
     }
+    SDL_RenderSetLogicalSize(renderer, screen_width, screen_height);
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+    screen_surface = SDL_CreateRGBSurface( 0, screen_width, screen_height,
+                                           32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 );
+    screen = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
+                               screen_width, screen_height);
     //printf("Display: %d x %d (%d bpp)\n", screen_width, screen_height, screen_bpp);
     dirty_rect.setDimension(screen_width, screen_height);
 
     initSJIS2UTF16();
 
-    setStr(&wm_title_string, DEFAULT_WM_TITLE);
-    setStr(&wm_icon_string, DEFAULT_WM_ICON);
-    SDL_WM_SetCaption( wm_title_string, wm_icon_string );
 
 #ifdef WIN32
     //check the audio driver setting
@@ -657,9 +557,8 @@ ONScripterLabel::ONScripterLabel()
   string_buffer_breaks(NULL), string_buffer_margins(NULL),
   sin_table(NULL), cos_table(NULL), whirl_table(NULL),
   breakup_cells(NULL), breakup_cellforms(NULL), breakup_mask(NULL),
-  shelter_select_link(NULL), default_cdrom_drive(NULL),
+  shelter_select_link(NULL),
   wave_file_name(NULL), seqmusic_file_name(NULL), seqmusic_info(NULL),
-  cdrom_info(NULL),
   music_file_name(NULL), music_buffer(NULL), mp3_sample(NULL),
   music_info(NULL), music_cmd(NULL), seqmusic_cmd(NULL),
   async_movie(NULL), movie_buffer(NULL), async_movie_surface(NULL),
@@ -693,7 +592,6 @@ ONScripterLabel::ONScripterLabel()
     nomovieupscale_flag = false;
     window_mode = false;
     use_app_icons = false;
-    cdrom_drive_number = 0;
     audiobuffer_size = DEFAULT_AUDIOBUF;
     match_bgm_audio_flag = false;
 #ifdef WIN32
@@ -713,7 +611,7 @@ ONScripterLabel::ONScripterLabel()
     skip_effect = in_effect_blank = false;
     effectspeed = EFFECTSPEED_NORMAL;
     shortcut_mouse_line = -1;
-    skip_mode = SKIP_NONE;
+    SetSkipMode(SKIP_NONE);
     music_buffer_length = 0;
     mp3fade_start = 0;
     wm_edit_string[0] = '\0';
@@ -840,12 +738,9 @@ void ONScripterLabel::setCDNumber(int cdrom_drive_number)
 
 void ONScripterLabel::setAudiodriver(const char *driver)
 {
-    char buf[128];
-    if (driver && driver[0] != '\0')
-        snprintf(buf, 128, "SDL_AUDIODRIVER=%s", driver);
-    else
-        strncpy(buf, "SDL_AUDIODRIVER=", 128);
-    SDL_putenv(buf);
+    if (!driver) driver = "";
+
+    SDL_setenv("SDL_AUDIODRIVER", driver, 1);
 }
 
 void ONScripterLabel::setAudioBufferSize(int kbyte_size)
@@ -1001,8 +896,10 @@ void ONScripterLabel::setGameIdentifier(const char *gameid)
 
 bool ONScripterLabel::file_exists(const char *fileName)
 {
-    std::ifstream infile(fileName);
-    return infile.good();
+    FILE* f = fopen(fileName, "r");
+    bool ret = f != NULL;
+    fclose(f);
+    return ret;
 }
 
 char* ONScripterLabel::create_filepath(DirPaths archive_path, const char* filename)
@@ -1178,11 +1075,11 @@ int ONScripterLabel::init()
     effect_src_surface   = AnimationInfo::allocSurface( screen_width, screen_height );
     effect_dst_surface   = AnimationInfo::allocSurface( screen_width, screen_height );
     effect_tmp_surface   = AnimationInfo::allocSurface( screen_width, screen_height );
-    SDL_SetAlpha( accumulation_surface, 0, SDL_ALPHA_OPAQUE );
-    SDL_SetAlpha( backup_surface, 0, SDL_ALPHA_OPAQUE );
-    SDL_SetAlpha( effect_src_surface, 0, SDL_ALPHA_OPAQUE );
-    SDL_SetAlpha( effect_dst_surface, 0, SDL_ALPHA_OPAQUE );
-    SDL_SetAlpha( effect_tmp_surface, 0, SDL_ALPHA_OPAQUE );
+    SDL_SetSurfaceAlphaMod( accumulation_surface, SDL_ALPHA_OPAQUE );
+    SDL_SetSurfaceAlphaMod( backup_surface, SDL_ALPHA_OPAQUE );
+    SDL_SetSurfaceAlphaMod( effect_src_surface, SDL_ALPHA_OPAQUE );
+    SDL_SetSurfaceAlphaMod( effect_dst_surface, SDL_ALPHA_OPAQUE );
+    SDL_SetSurfaceAlphaMod( effect_tmp_surface, SDL_ALPHA_OPAQUE );
 
     num_loaded_images = 10; // to suppress temporal increase at the start-up
 
@@ -1290,24 +1187,8 @@ int ONScripterLabel::init()
     }
     if(font_picker == -1)
     {
-        fprintf( stderr, "no font file detected; exiting\n" );
+        SDL_Log("no font file detected; exiting\n" );
         return -1;
-    }
-
-    // ----------------------------------------
-    // Sound related variables
-    this->cdaudio_flag = cdaudio_flag;
-    if ( cdaudio_flag ){
-        if ( cdrom_drive_number >= 0 && cdrom_drive_number < SDL_CDNumDrives() )
-            cdrom_info = SDL_CDOpen( cdrom_drive_number );
-        if ( !cdrom_info ){
-            fprintf(stderr, "Couldn't open default CD-ROM: %s\n", SDL_GetError());
-        }
-        else if ( cdrom_info && !CD_INDRIVE( SDL_CDStatus( cdrom_info ) ) ) {
-            fprintf( stderr, "no CD-ROM in the drive\n" );
-            SDL_CDClose( cdrom_info );
-            cdrom_info = NULL;
-        }
     }
 
     // ----------------------------------------
@@ -1446,7 +1327,7 @@ void ONScripterLabel::resetSub()
 
     resetFlagsSub();
 
-    skip_mode = (skip_mode & SKIP_TO_EOP) ? SKIP_TO_EOP : SKIP_NONE;
+    SetSkipMode(skip_mode & SKIP_TO_EOP);
     setStr(&trap_dest, NULL);
 
     resetSentenceFont();
@@ -1486,7 +1367,7 @@ void ONScripterLabel::resetSub()
 
 void ONScripterLabel::resetFlags()
 {
-    automode_flag = false;
+    SetAutomode(false);
     autoclick_time = 0;
     btntime2_flag = false;
     btntime_value = 0;
@@ -1764,20 +1645,14 @@ void ONScripterLabel::flushDirect( SDL_Rect &rect, int refresh_mode, bool update
 {
     //printf("flush %d: %d %d %d %d\n", refresh_mode, rect.x, rect.y, rect.w, rect.h );
 
-    if (surround_rects) {
-        // playing a movie, need to avoid overpainting it
-        SDL_Rect tmp_rects[4];
-        for (int i=0; i<4; ++i) {
-            if (intersectRects(tmp_rects[i], rect, surround_rects[i])) {
-                refreshSurface( accumulation_surface, &tmp_rects[i], refresh_mode );
-                SDL_BlitSurface( accumulation_surface, &tmp_rects[i], screen_surface, &tmp_rects[i] );
-            }
-        }
-        if (updaterect) SDL_UpdateRects( screen_surface, 4, tmp_rects );
-    } else { 
-        refreshSurface( accumulation_surface, &rect, refresh_mode );
-        SDL_BlitSurface( accumulation_surface, &rect, screen_surface, &rect );
-        if (updaterect) SDL_UpdateRect( screen_surface, rect.x, rect.y, rect.w, rect.h );
+    refreshSurface( accumulation_surface, &rect, refresh_mode );
+    SDL_SetSurfaceBlendMode(accumulation_surface, SDL_BLENDMODE_NONE);
+    SDL_BlitSurface( accumulation_surface, &rect, screen_surface, &rect );
+    if (updaterect) {
+        SDL_UpdateTexture(screen, NULL, screen_surface->pixels, screen_surface->pitch);
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, screen, NULL, NULL);
+        SDL_RenderPresent(renderer);
     }
 }
 
@@ -1974,12 +1849,12 @@ void ONScripterLabel::executeLabel()
 
         if ( kidokuskip_flag && (skip_mode & SKIP_NORMAL) &&
              kidokumode_flag && !script_h.isKidoku() )
-            skip_mode &= ~SKIP_NORMAL;
+            SetSkipMode(skip_mode & ~SKIP_NORMAL);
 
         //check for quit event before running each command, for safety
         //(this won't prevent all window lockups, but should give some
         // greater chance of the user being able to quit when one happens)
-        if ( SDL_PumpEvents(), SDL_PeepEvents( NULL, 1, SDL_PEEKEVENT, SDL_QUITMASK) )
+        if ( SDL_PumpEvents(), SDL_PeepEvents( NULL, 1, SDL_PEEKEVENT, SDL_QUIT, SDL_QUIT) )
             endCommand();
 
         int ret = ScriptParser::parseLine();
@@ -2494,14 +2369,14 @@ void ONScripterLabel::loadEnvData()
 {
     volume_on_flag = true;
     text_speed_no = 1;
-    skip_mode &= ~SKIP_TO_EOP;
-    setStr( &default_env_font, NULL );
+    SetSkipMode(skip_mode & ~SKIP_TO_EOP);
+    default_env_font = NULL;
     cdaudio_on_flag = true;
-    setStr( &default_cdrom_drive, NULL );
+    default_cdrom_drive = NULL;
     kidokumode_flag = true;
     use_default_volume = true;
     bgmdownmode_flag = false;
-    setStr( &savedir, NULL );
+    savedir = NULL;
     automode_time = 1000;
 
     if (loadFileIOBuf( "envdata" ) == 0){
@@ -2517,7 +2392,7 @@ void ONScripterLabel::loadEnvData()
             errorAndCont(script_h.errbuf, NULL, "Env Issue", true);
             text_speed_no = 1;
         }
-        if (readInt() == 1) skip_mode |= SKIP_TO_EOP;
+        if (readInt() == 1) SetSkipMode(skip_mode | SKIP_TO_EOP);
         readStr( &default_env_font );
         if (default_env_font == NULL)
             setStr(&default_env_font, DEFAULT_ENV_FONT);
@@ -2602,10 +2477,6 @@ void ONScripterLabel::quit(bool no_error)
     if (async_movie) stopMovie(async_movie);
     async_movie = NULL;
 
-    if ( cdrom_info ){
-        SDL_CDStop( cdrom_info );
-        SDL_CDClose( cdrom_info );
-    }
     if ( seqmusic_info ){
         Mix_HaltMusic();
         Mix_FreeMusic( seqmusic_info );

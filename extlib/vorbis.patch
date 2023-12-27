@@ -1,0 +1,41 @@
+diff --git a/Android.mk b/Android.mk
+new file mode 100644
+index 0000000..9614a7c
+--- /dev/null
++++ b/Android.mk
+@@ -0,0 +1,35 @@
++LOCAL_PATH := $(call my-dir)/lib
++
++include $(CLEAR_VARS)
++
++LOCAL_MODULE := vorbis
++
++LOCAL_C_INCLUDES := $(LOCAL_PATH)/../include \
++    $(LOCAL_PATH)/../../ogg/include \
++    $(LOCAL_PATH)/../../ogg/android
++# Add your application source files here...
++LOCAL_SRC_FILES := mdct.c \
++    smallft.c \
++    block.c \
++    envelope.c \
++    window.c \
++    lsp.c \
++    lpc.c \
++    analysis.c \
++    synthesis.c \
++    psy.c \
++    info.c \
++    floor1.c \
++    floor0.c \
++    res0.c \
++    mapping0.c \
++    registry.c \
++    codebook.c \
++    sharedbook.c \
++    lookup.c \
++    bitrate.c \
++    vorbisfile.c
++
++LOCAL_SHARED_LIBRARIES := ogg
++
++include $(BUILD_SHARED_LIBRARY)

@@ -1,0 +1,18 @@
+[submodule "extlib/SDL"]
+	path = extlib/SDL
+	url = https://github.com/libsdl-org/SDL/
+[submodule "extlib/ogg"]
+	path = extlib/ogg
+	url = https://github.com/libsdl-org/ogg.git
+[submodule "extlib/SDL_image"]
+	path = extlib/SDL_image
+	url = https://github.com/libsdl-org/SDL_image.git
+[submodule "extlib/SDL_ttf"]
+	path = extlib/SDL_ttf
+	url = https://github.com/libsdl-org/SDL_ttf.git
+[submodule "extlib/SDL_mixer"]
+	path = extlib/SDL_mixer
+	url = https://github.com/libsdl-org/SDL_mixer.git
+[submodule "extlib/smpeg"]
+	path = extlib/smpeg
+	url = https://github.com/icculus/smpeg

@@ -1985,9 +1985,9 @@ void ScriptHandler::processError( const char *str, const char *title, const char
     const char *type = is_warning ? "Warning" : "Fatal";
 
     if (is_simple) {
-        fprintf(stderr, " ***[%s] %s: %s ***\n", type, title, str);
+        SDL_Log(" ***[%s] %s: %s ***\n", type, title, str);
         if (detail)
-            fprintf(stderr, "\t%s\n", detail);
+            SDL_Log("\t%s\n", detail);
 
         if (is_warning && !strict_warnings) return;
 
@@ -2019,16 +2019,16 @@ void ScriptHandler::processError( const char *str, const char *title, const char
                 snprintf(errcmd, 128, ", user-defined cmd \"%s\"", current_cmd);
         }
         if (linenum < 0) {
-            fprintf(stderr, " ***[%s] %s at line ?? (*%s:)%s - %s ***\n",
+            SDL_Log(" ***[%s] %s at line ?? (*%s:)%s - %s ***\n",
                     type, title, label.name, errcmd, str);
         } else {
-            fprintf(stderr, " ***[%s] %s at line %d (*%s:%d)%s - %s ***\n",
+            SDL_Log(" ***[%s] %s at line %d (*%s:%d)%s - %s ***\n",
                     type, title, linenum, label.name, lblinenum, errcmd, str);
         }
         if (detail)
-            fprintf(stderr, "\t%s\n", detail);
+            SDL_Log("\t%s\n", detail);
         if (string_buffer && *string_buffer)
-            fprintf(stderr, "\t(String buffer: [%s])\n", string_buffer);
+            SDL_Log("\t(String buffer: [%s])\n", string_buffer);
 
         if (is_warning && !strict_warnings) return;
 
@@ -2048,7 +2048,7 @@ void ScriptHandler::processError( const char *str, const char *title, const char
             if(!ons->doErrorBox(title, errhist, false, true))
                 return;
 
-            fprintf(stderr, " ***[Fatal] User terminated at warning ***\n");
+            SDL_Log(" ***[Fatal] User terminated at warning ***\n");
         }
 
         //Mion: grabbing the current line in the script & up to 2 previous ones,

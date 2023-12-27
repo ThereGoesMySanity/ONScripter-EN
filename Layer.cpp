@@ -115,7 +115,7 @@ void Scratch::update(int level)
 }
 
 // Called each time the screen is refreshed.  Draws a simple line, without antialiasing.
-void Scratch::draw(SDL_Surface* surface, SDL_Rect clip) 
+void Scratch::draw(SDL_Surface* surface, SDL_Rect clip)
 {
     // Don't draw unless this scratch is visible and likely to pass through the updated rectangle.
     if ( (offs == 0) || (x1 < clip.x) || (x2 < clip.x) ||
