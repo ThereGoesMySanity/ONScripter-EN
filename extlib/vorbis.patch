@@ -36,6 +36,6 @@ index 0000000..9614a7c
 +    bitrate.c \
 +    vorbisfile.c
 +
-+LOCAL_SHARED_LIBRARIES := ogg
++LOCAL_STATIC_LIBRARIES := ogg
 +
 +include $(BUILD_SHARED_LIBRARY)

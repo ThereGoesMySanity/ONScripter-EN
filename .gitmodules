@@ -16,3 +16,6 @@
 [submodule "extlib/smpeg"]
 	path = extlib/smpeg
 	url = https://github.com/icculus/smpeg
+[submodule "extlib/vorbis"]
+	path = extlib/vorbis
+	url = https://github.com/libsdl-org/vorbis.git

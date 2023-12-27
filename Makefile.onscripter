@@ -26,6 +26,7 @@ GUI_OBJS = ONScripterLabel$(OBJSUFFIX)					\
 	ONScripterLabel_rmenu$(OBJSUFFIX)				\
 	ONScripterLabel_animation$(OBJSUFFIX)				\
 	ONScripterLabel_sound$(OBJSUFFIX)				\
+	ONScripterLabel_state$(OBJSUFFIX)				\
 	ONScripterLabel_file$(OBJSUFFIX)				\
 	ONScripterLabel_file2$(OBJSUFFIX)				\
 	ONScripterLabel_image$(OBJSUFFIX) AnimationInfo$(OBJSUFFIX)	\
@@ -218,6 +219,7 @@ ONScripterLabel_sound$(OBJSUFFIX): $(ONSCRIPTER_HEADER)
 ONScripterLabel_file$(OBJSUFFIX): $(ONSCRIPTER_HEADER)
 ONScripterLabel_file2$(OBJSUFFIX): $(ONSCRIPTER_HEADER)
 ONScripterLabel_image$(OBJSUFFIX): $(ONSCRIPTER_HEADER) graphics_common.h graphics_blend.h
+ONScripterLabel_state$(OBJSUFFIX): $(ONSCRIPTER_HEADER)
 AnimationInfo$(OBJSUFFIX): AnimationInfo.h graphics_common.h graphics_sum.h graphics_blend.h graphics_resize.h
 FontInfo$(OBJSUFFIX): FontInfo.h Encoding.h
 DirtyRect$(OBJSUFFIX) : DirtyRect.h

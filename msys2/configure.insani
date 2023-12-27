@@ -48,8 +48,8 @@ INTERNAL_LIBJPEG=false
 INTERNAL_OGGLIBS=false
 EXPLICIT_OGGLIBS=false
 
-SDL_CONFIG=sdl-config
-SMPEG_CONFIG=smpeg-config
+SDL_CONFIG=sdl2-config
+SMPEG_CONFIG=smpeg2-config
 FREETYPE_CONFIG=freetype-config
 
 VERSION=`awk '/define VER_NUMBER/ {print $3}' version.h | sed s/-en$//`
@@ -240,7 +240,7 @@ internalise_SDL() {
     INTERNAL_SDL_TTF=true
     INTERNAL_SMPEG=true
     SDL_CONFIG=./extlib/bin/sdl-config
-    SMPEG_CONFIG=./extlib/bin/smpeg-config
+    SMPEG_CONFIG=./extlib/bin/smpeg2-config
 }
 
 if $INTERNAL_LIBS
@@ -682,7 +682,7 @@ fi
 
 if $INTERNAL_SMPEG
 then
-    SMPEG_CONFIG=./extlib/bin/smpeg-config
+    SMPEG_CONFIG=./extlib/bin/smpeg2-config
 else
     $echo_n "Checking for system libsmpeg... ${nobr}"
     VER=`($SMPEG_CONFIG --version) 2>/dev/null`
@@ -690,7 +690,7 @@ else
     then echo "yes"
     else echo "no"
 	INTERNAL_SMPEG=true
-	SMPEG_CONFIG=./extlib/bin/smpeg-config
+	SMPEG_CONFIG=./extlib/bin/smpeg2-config
     fi
 fi
 
@@ -877,10 +877,10 @@ TOOL_LIBS = -Lextlib/lib \\
 LIBS = -Lextlib/lib \\
        -static -Wl,--start-group \\
        $MY_SDL_LIBS \\
-       $LINKSDL_ttf \\
+       $LINKSDL2_ttf \\
        \$(shell $SMPEG_CONFIG --libs) \$(shell $FREETYPE_CONFIG --libs) \\
-       $LINKSDL_image $LINKjpeg $LINKpng $LINKz \\
-       $LINKSDL_mixer $LINKogg $LINKvorbis $LINKvorbisfile \\
+       $LINKSDL2_image $LINKjpeg $LINKpng $LINKz \\
+       $LINKSDL2_mixer $LINKogg $LINKvorbis $LINKvorbisfile \\
        $LINKbz2 -Wl,--end-group
 
 # Remove -DUSE_MESSAGEBOX if you don't want Windows dialog boxes
@@ -899,9 +899,9 @@ TOOL_LIBS = -Lextlib/lib \\
 LIBS = -Lextlib/lib \\
        \$(shell \$(SDL_CONFIG) --static-libs)         \\
        \$(shell $SMPEG_CONFIG --libs)              \\
-       $LINKSDL_ttf \$(shell $FREETYPE_CONFIG --libs) \\
-       $LINKSDL_image $LINKjpeg $LINKpng              \\
-       $LINKSDL_mixer $LINKogg $LINKvorbis $LINKvorbisfile \\
+       $LINKSDL2_ttf \$(shell $FREETYPE_CONFIG --libs) \\
+       $LINKSDL2_image $LINKjpeg $LINKpng              \\
+       $LINKSDL2_mixer $LINKogg $LINKvorbis $LINKvorbisfile \\
        $LINKbz2 -lm -framework QuickTime -framework CoreFoundation
 
 DEFS = -DMACOSX -DUTF8_CAPTION -DUTF8_FILESYSTEM -DUSE_OGG_VORBIS
@@ -926,11 +926,11 @@ TOOL_LIBS = -Lextlib/lib \\
             $LINKjpeg $LINKpng $LINKz \\
             $LINKbz2
 LIBS = -Lextlib/lib \\
-       $LINKSDL_image \$(if \$(findstring true,$INTERNAL_SDL_IMAGE),$LINKjpeg $LINKpng $LINKz) \\
-       $LINKSDL_mixer \$(if \$(or \$(findstring true,$INTERNAL_SDL_MIXER),\$(findstring true,$EXPLICIT_OGGLIBS)),$LINKvorbisfile $LINKvorbis $LINKogg) \\
+       $LINKSDL2_image \$(if \$(findstring true,$INTERNAL_SDL_IMAGE),$LINKjpeg $LINKpng $LINKz) \\
+       $LINKSDL2_mixer \$(if \$(or \$(findstring true,$INTERNAL_SDL_MIXER),\$(findstring true,$EXPLICIT_OGGLIBS)),$LINKvorbisfile $LINKvorbis $LINKogg) \\
        \$(shell \$(SDL_CONFIG) --libs)      \\
        \$(shell $SMPEG_CONFIG --libs)    \\
-       $LINKSDL_ttf \$(shell $FREETYPE_CONFIG --libs) \\
+       $LINKSDL2_ttf \$(shell $FREETYPE_CONFIG --libs) \\
        $LINKbz2 \$(if \$(findstring true,$INTERNAL_SDL),$INTERNAL_LDFLAGS)
 
 DEFS = -DLINUX -DUSE_OGG_VORBIS $EXTRA_DEPS

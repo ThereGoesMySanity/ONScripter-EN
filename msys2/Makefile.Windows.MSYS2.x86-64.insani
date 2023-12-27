@@ -54,7 +54,7 @@ export LD	   := c++ -m64 -o
 # ONScripter variables
 OSCFLAGSEXTRA = -Wall  -DUSE_X86_GFX $(OSCTMPFLAGS)
 INCS = $(shell $(SDL_CONFIG) --cflags)      \
-                        $(shell smpeg-config --cflags)    \
+                        $(shell smpeg2-config --cflags)    \
                         $(shell pkg-config freetype2 --cflags)
 
 GNURX_DIR = tools/libgnurx
@@ -68,7 +68,7 @@ TOOL_LIBS = -Wl,--start-group \
 LIBS = -static -Wl,--start-group \
        $(shell $(SDL_CONFIG) --static-libs) \
        -lSDL_ttf \
-       $(shell smpeg-config --libs) $(shell pkg-config freetype2 --libs) \
+       $(shell smpeg2-config --libs) $(shell pkg-config freetype2 --libs) \
        -lSDL_image -ljpeg -lpng -lz \
        -lSDL_mixer -logg -lvorbis -lvorbisfile \
        -lbrotlidec -lbrotlicommon -lharfbuzz -ltiff -lwebp -lmad -lgraphite2 -ljbig -lsharpyuv -lzstd -ldeflate -lLerc -llzma -liconv -ldinput -lwinmm -ldxguid -lrpcrt4 \

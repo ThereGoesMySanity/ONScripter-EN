@@ -48,8 +48,8 @@ INTERNAL_LIBJPEG=false
 INTERNAL_OGGLIBS=false
 EXPLICIT_OGGLIBS=false
 
-SDL_CONFIG=sdl-config
-SMPEG_CONFIG=smpeg-config
+SDL_CONFIG=sdl2-config
+SMPEG_CONFIG=smpeg2-config
 FREETYPE_CONFIG=freetype-config
 
 VERSION=`awk '/define VER_NUMBER/ {print $3}' version.h | sed s/-en$//`
@@ -242,9 +242,9 @@ internalise_SDL() {
     INTERNAL_SDL_MIXER=true
     INTERNAL_SDL_TTF=true
     INTERNAL_SMPEG=true
-    SDL_CONFIG=./extlib/bin/sdl-config
+    SDL_CONFIG=./extlib/bin/sdl2-config
     SDLOTHERCONFIG=--disable-rpath
-    SMPEG_CONFIG=./extlib/bin/smpeg-config
+    SMPEG_CONFIG=./extlib/bin/smpeg2-config
 }
 
 if $INTERNAL_LIBS
@@ -537,13 +537,13 @@ fi
 
 if $INTERNAL_SDL
 then
-    SDL_CONFIG=./extlib/bin/sdl-config
+    SDL_CONFIG=./extlib/bin/sdl2-config
 else
     $echo_n "Checking for system SDL... ${nobr}"
     case "$SYS" in
         MinGW)  SDL_CONFIG=`pwd`/extlib
                 cd win_dll; make prefix=$SDL_CONFIG > /dev/null 2>&1; cd ..
-                SDL_CONFIG=`pwd`/extlib/bin/sdl-config
+                SDL_CONFIG=`pwd`/extlib/bin/sdl2-config
                 DISTCLEAN_OTHER=SDL.dll $DISTCLEAN_OTHER
                 cp -p ./win_dll/SDL.dll `pwd`;;
         esac
@@ -584,7 +584,7 @@ then
 	int main(int argc, char**argv){bool j=IMG_Load_RW(SDL_RWFromConstMem(jpeg,309),1),p=IMG_Load_RW(SDL_RWFromConstMem(png,69),1);return j&&p?0:(j?1:(p?2:3));}
 	_EOF
     INTERNAL_SDL_IMAGE=true
-    $CXX `$SDL_CONFIG --cflags` `$SDL_CONFIG --libs` -lSDL_image test.cc -o itest >/dev/null 2>&1
+    $CXX `$SDL_CONFIG --cflags` `$SDL_CONFIG --libs` -lSDL2_image test.cc -o itest >/dev/null 2>&1
     ./itest 2>/dev/null
     case $? in
     0) echo "yes"; INTERNAL_SDL_IMAGE=false ;;
@@ -674,7 +674,7 @@ then
 	Mix_Music*m;bool ogg=m=Mix_LoadMUS("o.ogg");if(m)Mix_FreeMusic(m);bool mp3=m=Mix_LoadMUS("o.mp3");if(m)Mix_FreeMusic(m);return ogg&&mp3?0:(ogg?1:(mp3?2:3));}
 	_EOF
     INTERNAL_SDL_MIXER=true
-    $CXX `$SDL_CONFIG --cflags` `$SDL_CONFIG --libs` -lSDL_mixer test.cc -o mtest >/dev/null 2>&1
+    $CXX `$SDL_CONFIG --cflags` `$SDL_CONFIG --libs` -lSDL2_mixer test.cc -o mtest >/dev/null 2>&1
     ./mtest 2>/dev/null
     case $? in
     0) echo "yes"; INTERNAL_SDL_MIXER=false ;;
@@ -718,7 +718,7 @@ then
 	OggVorbis_File vf;f=fopen("o.ogg","rb");int n=ov_open(f,&vf,0,0)<0;fclose(f);return n;}
 	_EOF
     EXPLICIT_OGGLIBS=true
-    $CXX `$SDL_CONFIG --cflags` `$SDL_CONFIG --libs` -lSDL_mixer test.cc -o mtest >/dev/null 2>&1
+    $CXX `$SDL_CONFIG --cflags` `$SDL_CONFIG --libs` -lSDL2_mixer test.cc -o mtest >/dev/null 2>&1
     case $? in
     0) echo "no"; EXPLICIT_OGGLIBS=false ;;
     *) echo "yes" ;;
@@ -745,7 +745,7 @@ fi
 
 if $INTERNAL_SMPEG
 then
-    SMPEG_CONFIG=./extlib/bin/smpeg-config
+    SMPEG_CONFIG=./extlib/bin/smpeg2-config
 else
     $echo_n "Checking for system libsmpeg... ${nobr}"
     VER=`($SMPEG_CONFIG --version) 2>/dev/null`
@@ -753,7 +753,7 @@ else
     then echo "yes"
     else echo "no"
 	INTERNAL_SMPEG=true
-	SMPEG_CONFIG=./extlib/bin/smpeg-config
+	SMPEG_CONFIG=./extlib/bin/smpeg2-config
     fi
 fi
 
@@ -796,7 +796,7 @@ then
 	int main(int argc, char **argv){if(TTF_Init()==-1)return 1;TTF_Quit();return 0;}
 	_EOF
     INTERNAL_SDL_TTF=true
-    $CXX `$SDL_CONFIG --cflags` `$SDL_CONFIG --libs` -lSDL_ttf test.cc -o ttest >/dev/null 2>&1
+    $CXX `$SDL_CONFIG --cflags` `$SDL_CONFIG --libs` -lSDL2_ttf test.cc -o ttest >/dev/null 2>&1
     if ./ttest 2>/dev/null
     then echo "yes"; INTERNAL_SDL_TTF=false
     else echo "no"
@@ -822,16 +822,16 @@ require() {
 	MLIB="$MLIB$3"
     fi
 }
-require $INTERNAL_SDL       internal_sdl       SDL
+require $INTERNAL_SDL       internal_sdl       SDL2
 require $INTERNAL_LIBPNG    internal_png       libpng
 require $INTERNAL_LIBJPEG   internal_jpeg      libjpeg
-require $INTERNAL_SDL_IMAGE internal_sdl_image SDL_image
+require $INTERNAL_SDL_IMAGE internal_sdl_image SDL2_image
 require $INTERNAL_OGGLIBS   internal_ogglibs   "libogg, libvorbis"
-require $INTERNAL_SDL_MIXER internal_sdl_mixer SDL_mixer
+require $INTERNAL_SDL_MIXER internal_sdl_mixer SDL2_mixer
 require $INTERNAL_BZIP2     internal_bzip2     libbz2
 require $INTERNAL_SMPEG     internal_smpeg     libsmpeg
 require $INTERNAL_FREETYPE  internal_freetype  Freetype
-require $INTERNAL_SDL_TTF   internal_sdl_ttf   SDL_ttf
+require $INTERNAL_SDL_TTF   internal_sdl_ttf   SDL2_ttf
 
 genlink() {
     if $1
@@ -844,13 +844,13 @@ genlink() {
 genlink $INTERNAL_LIBPNG    z
 genlink $INTERNAL_LIBPNG    png
 genlink $INTERNAL_LIBJPEG   jpeg
-genlink $INTERNAL_SDL_IMAGE SDL_image
+genlink $INTERNAL_SDL_IMAGE SDL2_image
 genlink $INTERNAL_OGGLIBS   ogg
 genlink $INTERNAL_OGGLIBS   vorbis
 genlink $INTERNAL_OGGLIBS   vorbisfile
-genlink $INTERNAL_SDL_MIXER SDL_mixer
+genlink $INTERNAL_SDL_MIXER SDL2_mixer
 genlink $INTERNAL_BZIP2     bz2
-genlink $INTERNAL_SDL_TTF   SDL_ttf
+genlink $INTERNAL_SDL_TTF   SDL2_ttf
 
 if [ -n "$MLIB" -a ! -d extlib ]
 then
@@ -954,10 +954,10 @@ TOOL_LIBS = -Lextlib/lib \\
 LIBS = -Lextlib/lib \\
        -static -Wl,--start-group \\
        $MY_SDL_LIBS \\
-       $LINKSDL_ttf \\
+       $LINKSDL2_ttf \\
        \$(shell $SMPEG_CONFIG --libs) \$(shell $FREETYPE_CONFIG --libs) \\
-       $LINKSDL_image $LINKjpeg $LINKpng $LINKz \\
-       $LINKSDL_mixer $LINKogg $LINKvorbis $LINKvorbisfile \\
+       $LINKSDL2_image $LINKjpeg $LINKpng $LINKz \\
+       $LINKSDL2_mixer $LINKogg $LINKvorbis $LINKvorbisfile \\
        $LINKbz2 -Wl,--end-group
 
 # Remove -DUSE_MESSAGEBOX if you don't want Windows dialog boxes
@@ -976,9 +976,9 @@ TOOL_LIBS = -Lextlib/lib \\
 LIBS = -Lextlib/lib \\
        \$(shell \$(SDL_CONFIG) --static-libs)         \\
        \$(shell $SMPEG_CONFIG --libs)              \\
-       $LINKSDL_ttf \$(shell $FREETYPE_CONFIG --libs) \\
-       $LINKSDL_image $LINKjpeg $LINKpng              \\
-       $LINKSDL_mixer $LINKogg $LINKvorbis $LINKvorbisfile \\
+       $LINKSDL2_ttf \$(shell $FREETYPE_CONFIG --libs) \\
+       $LINKSDL2_image $LINKjpeg $LINKpng              \\
+       $LINKSDL2_mixer $LINKogg $LINKvorbis $LINKvorbisfile \\
        $LINKbz2 -lm -framework QuickTime -framework CoreFoundation
 
 DEFS = -DMACOSX -DUTF8_CAPTION -DUTF8_FILESYSTEM -DUSE_OGG_VORBIS
@@ -1003,11 +1003,11 @@ TOOL_LIBS = -Lextlib/lib \\
             $LINKjpeg $LINKpng $LINKz \\
             $LINKbz2
 LIBS = -Lextlib/lib \\
-       $LINKSDL_image \$(if \$(findstring true,$INTERNAL_SDL_IMAGE),$LINKjpeg $LINKpng $LINKz) \\
-       $LINKSDL_mixer \$(if \$(or \$(findstring true,$INTERNAL_SDL_MIXER),\$(findstring true,$EXPLICIT_OGGLIBS)),$LINKvorbisfile $LINKvorbis $LINKogg) \\
+       $LINKSDL2_image \$(if \$(findstring true,$INTERNAL_SDL_IMAGE),$LINKjpeg $LINKpng $LINKz) \\
+       $LINKSDL2_mixer \$(if \$(or \$(findstring true,$INTERNAL_SDL_MIXER),\$(findstring true,$EXPLICIT_OGGLIBS)),$LINKvorbisfile $LINKvorbis $LINKogg) \\
        \$(shell \$(SDL_CONFIG) --libs)      \\
        \$(shell $SMPEG_CONFIG --libs)    \\
-       $LINKSDL_ttf \$(shell $FREETYPE_CONFIG --libs) \\
+       $LINKSDL2_ttf \$(shell $FREETYPE_CONFIG --libs) \\
        $LINKbz2 \$(if \$(findstring true,$INTERNAL_SDL),$INTERNAL_LDFLAGS)
 
 DEFS = -DLINUX -DUSE_OGG_VORBIS $EXTRA_DEPS

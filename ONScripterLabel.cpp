@@ -41,7 +41,8 @@
 #include "ONScripterLabel.h"
 #include "graphics_cpu.h"
 #include "graphics_resize.h"
-#include <istream>
+#include <cstdio>
+#include <fstream>
 
 #ifdef MACOSX
 #include "cocoa_alertbox.h"
@@ -57,7 +58,6 @@
 #endif // USE_PPC_GFX
 
 #endif // MACOSX
-
 
 #ifdef WIN32
 #include <windows.h>
@@ -896,10 +896,8 @@ void ONScripterLabel::setGameIdentifier(const char *gameid)
 
 bool ONScripterLabel::file_exists(const char *fileName)
 {
-    FILE* f = fopen(fileName, "r");
-    bool ret = f != NULL;
-    fclose(f);
-    return ret;
+    std::ifstream infile(fileName);
+    return infile.good();
 }
 
 char* ONScripterLabel::create_filepath(DirPaths archive_path, const char* filename)

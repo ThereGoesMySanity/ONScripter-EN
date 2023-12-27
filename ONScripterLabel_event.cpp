@@ -43,7 +43,6 @@
 #include <windows.h>
 #include "SDL_syswm.h"
 #endif
-#include <SDL/SDL_video.h>
 
 #define ONS_TIMER_EVENT    (SDL_USEREVENT)
 #define ONS_SOUND_EVENT    (SDL_USEREVENT+1)
@@ -874,9 +873,9 @@ void ONScripterLabel::variableEditMode( SDL_KeyboardEvent *event )
         if ( (variable_edit_mode == EDIT_SELECT_MODE) ||
              (variable_edit_mode == EDIT_VOLUME_MODE) ){
             variable_edit_mode = NOT_EDIT_MODE;
-            SDL_WM_SetCaption( DEFAULT_WM_TITLE, DEFAULT_WM_ICON );
+            SDL_SetWindowTitle(window, DEFAULT_WM_TITLE);
             SDL_Delay( 100 );
-            SDL_WM_SetCaption( wm_title_string, wm_icon_string );
+            SDL_SetWindowTitle(window, wm_title_string);
             return;
         }
         if (edit_flag)
@@ -922,7 +921,7 @@ void ONScripterLabel::variableEditMode( SDL_KeyboardEvent *event )
                  EDIT_MODE_PREFIX, var_name, p, (variable_edit_sign==1)?"":"-", variable_edit_num );
     }
 
-    SDL_WM_SetCaption( wm_edit_string, wm_icon_string );
+    SDL_SetWindowTitle(window, wm_edit_string);
 }
 
 void ONScripterLabel::shiftCursorOnButton( int diff )
@@ -1124,7 +1123,7 @@ bool ONScripterLabel::keyPressEvent( SDL_KeyboardEvent *event )
             variable_edit_sign = 1;
             variable_edit_num = 0;
             sprintf( wm_edit_string, "%s%s", EDIT_MODE_PREFIX, EDIT_VOLUME_STRING );
-            SDL_WM_SetCaption( wm_edit_string, wm_icon_string );
+            SDL_SetWindowTitle(window, wm_edit_string);
         }
 
         //'z' is for entering Edit Mode (if enabled)
@@ -1135,7 +1134,7 @@ bool ONScripterLabel::keyPressEvent( SDL_KeyboardEvent *event )
             variable_edit_sign = 1;
             variable_edit_num = 0;
             sprintf( wm_edit_string, "%s%s", EDIT_MODE_PREFIX, EDIT_SELECT_STRING );
-            SDL_WM_SetCaption( wm_edit_string, wm_icon_string );
+            SDL_SetWindowTitle(window, wm_edit_string);
         }
     }
 
