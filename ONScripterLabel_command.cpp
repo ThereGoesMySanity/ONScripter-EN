@@ -4084,7 +4084,7 @@ int ONScripterLabel::captionCommand()
     setStr( &wm_icon_string,  buf2 );
     delete[] buf2;
     //printf("caption (utf8): '%s'\n", wm_title_string);
-    SDL_SetWindowTitle(window, wm_title_string);
+    setWindowTitle(wm_title_string);
 #ifdef WIN32
     //convert from UTF-8 to Wide (Unicode) and thence to system ANSI
     len = MultiByteToWideChar(CP_UTF8, 0, wm_title_string, -1, NULL, 0);

@@ -37,7 +37,7 @@
 
 #include "ONScripterLabel.h"
 
-#if defined(LINUX) || defined(MACOSX)
+#if defined(LINUX) || defined(MACOSX) || defined(__ANDROID__)
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -66,7 +66,7 @@ void ONScripterLabel::searchSaveFile( SaveFileInfo &save_file_info, int no )
     script_h.getStringFromInteger( save_file_info.sjis_no, no,
                                   (num_save_file >= 10)?2:1,
                                   false, use_fullwidth );
-#if defined(LINUX) || defined(MACOSX)
+#if defined(LINUX) || defined(MACOSX) || defined(__ANDROID__)
     if (script_h.savedir)
         sprintf( file_name, "%ssave%d.dat", script_h.savedir, no );
     else

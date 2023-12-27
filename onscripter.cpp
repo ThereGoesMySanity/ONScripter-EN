@@ -32,7 +32,9 @@
 
 #include "SDL.h"
 #include "SDL_main.h"
-#include "jniState.h"
+#ifdef __ANDROID__
+#include "jniUtils.h"
+#endif
 
 #include <cstdio>
 

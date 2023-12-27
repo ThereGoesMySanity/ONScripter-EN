@@ -126,6 +126,7 @@ public:
     void setFileVersion(const char *ver);
     void setFullscreenMode();
     void setWindowMode();
+    void setWindowTitle(const char* title);
 #ifndef NO_LAYER_EFFECTS
     void setNoLayers();
 #endif

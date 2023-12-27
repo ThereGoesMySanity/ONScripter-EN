@@ -1,6 +1,4 @@
-#ifdef __ANDROID__
-
-#include "jniState.h"
+#include "jniUtils.h"
 #include "ONScripterLabel.h"
 
 extern "C"
@@ -24,5 +22,3 @@ jboolean new_value) {
     ONScripterLabel* ons = (ONScripterLabel*)((uintptr_t)ptr);
     ons->TrySetAutomode(new_value == JNI_TRUE);
 }
-
-#endif //__ANDROID__

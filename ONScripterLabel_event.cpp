@@ -873,9 +873,9 @@ void ONScripterLabel::variableEditMode( SDL_KeyboardEvent *event )
         if ( (variable_edit_mode == EDIT_SELECT_MODE) ||
              (variable_edit_mode == EDIT_VOLUME_MODE) ){
             variable_edit_mode = NOT_EDIT_MODE;
-            SDL_SetWindowTitle(window, DEFAULT_WM_TITLE);
+            setWindowTitle(DEFAULT_WM_TITLE);
             SDL_Delay( 100 );
-            SDL_SetWindowTitle(window, wm_title_string);
+            setWindowTitle(wm_title_string);
             return;
         }
         if (edit_flag)
@@ -921,7 +921,7 @@ void ONScripterLabel::variableEditMode( SDL_KeyboardEvent *event )
                  EDIT_MODE_PREFIX, var_name, p, (variable_edit_sign==1)?"":"-", variable_edit_num );
     }
 
-    SDL_SetWindowTitle(window, wm_edit_string);
+    setWindowTitle(wm_edit_string);
 }
 
 void ONScripterLabel::shiftCursorOnButton( int diff )
@@ -1123,7 +1123,7 @@ bool ONScripterLabel::keyPressEvent( SDL_KeyboardEvent *event )
             variable_edit_sign = 1;
             variable_edit_num = 0;
             sprintf( wm_edit_string, "%s%s", EDIT_MODE_PREFIX, EDIT_VOLUME_STRING );
-            SDL_SetWindowTitle(window, wm_edit_string);
+            setWindowTitle(wm_edit_string);
         }
 
         //'z' is for entering Edit Mode (if enabled)
@@ -1134,7 +1134,7 @@ bool ONScripterLabel::keyPressEvent( SDL_KeyboardEvent *event )
             variable_edit_sign = 1;
             variable_edit_num = 0;
             sprintf( wm_edit_string, "%s%s", EDIT_MODE_PREFIX, EDIT_SELECT_STRING );
-            SDL_SetWindowTitle(window, wm_edit_string);
+            setWindowTitle(wm_edit_string);
         }
     }
 

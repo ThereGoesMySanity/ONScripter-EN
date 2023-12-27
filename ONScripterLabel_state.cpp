@@ -1,6 +1,8 @@
 #include "ONScripterLabel.h"
-#include "jniState.h"
 #include <SDL.h>
+#ifdef __ANDROID__
+#include "jniUtils.h"
+#endif
 
 #define ONS_BREAK_EVENT    (SDL_USEREVENT+6)
 

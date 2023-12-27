@@ -71,6 +71,11 @@ typedef HRESULT (WINAPI *GETFOLDERPATH)(HWND, int, HANDLE, DWORD, LPTSTR);
 #include <sys/types.h>
 #include <pwd.h>
 #endif
+#ifdef __ANDROID__
+#include <unistd.h>
+#include "jniUtils.h"
+#endif
+
 #if !defined(WIN32) && !defined(MACOSX)
 #include "resources.h"
 #endif
@@ -403,7 +408,7 @@ void ONScripterLabel::initSDL()
             SDL_GetWMInfo(&info);
             SendMessage(info.window, WM_SETICON, ICON_BIG, (LPARAM)wicon);
         }
-#else
+#elif !defined(__ANDROID__)
         //backport from ponscripter
         const InternalResource* internal_icon = getResource("icon.png");
         if (internal_icon) {
@@ -794,6 +799,15 @@ void ONScripterLabel::setWindowMode()
     window_mode = true;
 }
 
+void ONScripterLabel::setWindowTitle(const char* title)
+{
+#ifdef __ANDROID__
+    JNI_SetWindowTitle(title);
+#else
+    setWindowTitle(title);
+#endif
+}
+
 #ifndef NO_LAYER_EFFECTS
 void ONScripterLabel::setNoLayers()
 {
@@ -896,8 +910,12 @@ void ONScripterLabel::setGameIdentifier(const char *gameid)
 
 bool ONScripterLabel::file_exists(const char *fileName)
 {
+#if defined(__ANDROID__) || defined(LINUX)
+    return access(fileName, F_OK) == 0;
+#else
     std::ifstream infile(fileName);
     return infile.good();
+#endif
 }
 
 char* ONScripterLabel::create_filepath(DirPaths archive_path, const char* filename)
